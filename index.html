@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Our Closet</title>
+<title>Our Closet — A Private Showroom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#f6f1e8;
@@ -322,6 +325,141 @@
     .card{box-shadow:none;border:none;padding:6px;page-break-inside:avoid}
   }
 </style>
+<style id="showroom-theme">
+  /* ============ The Showroom — an elevated boutique skin ============ */
+  :root{
+    --bg:#f5f2ec;
+    --bg2:#ece7dd;
+    --panel:#fdfcf9;
+    --line:#e0d9cc;
+    --wood:#7a5c3e;
+    --wood-dark:#453523;
+    --wood-light:#b09272;
+    --text:#1c1915;
+    --muted:#8d8374;
+    --a:#48627d;  --a-soft:#eaeef2;
+    --b:#a05c6e;  --b-soft:#f4eaed;
+    --s:#6d7d63;  --s-soft:#ebeee6;
+    --bad:#9d4a3f;
+    --brass:#a8894e;
+    --shadow:0 16px 44px rgba(38,30,18,.09);
+    --radius:6px;
+  }
+  body{
+    font-family:"Cormorant Garamond",Georgia,serif;
+    font-size:17px;
+    background:radial-gradient(1000px 520px at 50% -12%, #fbf9f4 0%, var(--bg) 68%);
+  }
+  .hint,.tag,.keynote,.field label,.dims label,.sec-foot .unit,.summary .row,
+  input,select,button,.chip,.toast,.mlabel,dialog p,.addrow input,.addrow select{
+    font-family:"Jost",Helvetica,Arial,sans-serif;
+  }
+  .hint,.keynote,dialog p{font-weight:300}
+
+  /* Wordmark */
+  header{padding:26px 34px}
+  h1{font-size:25px;font-weight:500;letter-spacing:.42em;text-transform:uppercase;margin-right:-.42em}
+  .tag{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;font-style:normal;color:var(--brass);margin-top:7px}
+  .logo{
+    width:50px;height:50px;border-radius:50%;border:1px solid var(--brass);
+    background:none;box-shadow:none;position:relative;
+  }
+  .logo::before{
+    content:"";position:absolute;inset:3px;border-radius:50%;border:1px solid rgba(168,137,78,.35);
+  }
+  .logo::after{
+    content:"C";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:"Cormorant Garamond",Georgia,serif;font-size:25px;color:var(--brass);
+  }
+  .namechip{border-radius:2px;border-color:var(--line)}
+  .namechip input{font-size:13px;letter-spacing:.06em}
+
+  /* Tabs as a boutique nav */
+  .tabs{gap:30px;padding:20px 36px 0;border-bottom:1px solid var(--line)}
+  .tab{
+    border:none;background:none;border-radius:0;padding:10px 2px 14px;
+    font-size:11.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid transparent;margin-bottom:-1px;
+  }
+  .tab.active{
+    background:none;box-shadow:none;font-weight:500;color:var(--text);
+    border-bottom:1px solid var(--brass);
+  }
+  .tab.gear{
+    border:1px solid var(--line);border-radius:2px;padding:9px 18px;margin-bottom:10px;
+  }
+  .tab.gear:hover{border-color:var(--brass);color:var(--text)}
+
+  /* Cards */
+  .card{border-radius:var(--radius);padding:24px 26px;border-color:var(--line)}
+  .card h2, dialog h2{
+    font-family:"Jost",sans-serif;font-weight:500;font-size:11.5px;
+    letter-spacing:.28em;color:var(--text);
+  }
+  .card h2::after, dialog h2::after{
+    content:"";display:block;width:26px;height:1px;background:var(--brass);margin:9px 0 10px;
+  }
+  .card .hint{font-size:12.5px;letter-spacing:.015em}
+  .summary h3{font-family:"Jost",sans-serif;font-weight:500;letter-spacing:.24em;font-size:10.5px}
+  .summary .row{font-size:12.5px;font-weight:300}
+  .fair{
+    font-family:"Cormorant Garamond",Georgia,serif;font-size:15px;
+    background:none;border:none;border-left:2px solid var(--brass);border-radius:0;
+    padding:6px 0 6px 14px;
+  }
+
+  /* Buttons */
+  .btn{
+    background:var(--text);border:1px solid var(--text);border-radius:2px;
+    font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:400;
+    padding:11px 20px;color:#faf8f4;
+  }
+  .btn:hover{background:#000;border-color:#000}
+  .btn.ghost{background:none;color:var(--text);border:1px solid var(--line)}
+  .btn.ghost:hover{background:none;border-color:var(--text)}
+  select.designs{border-radius:2px;font-size:12px;letter-spacing:.06em}
+
+  /* Palette pieces */
+  .pitem{border-radius:2px;background:var(--panel)}
+  .pitem:hover{border-color:var(--brass)}
+  .pitem b{font-family:"Jost",sans-serif;font-weight:500;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  .pitem span span{font-weight:300}
+
+  /* The closet itself — walnut & brass */
+  .closet{
+    border-color:var(--wood-dark);border-radius:2px;
+    background:repeating-linear-gradient(180deg,#f1ebdf 0 26px,#ece4d4 26px 52px);
+  }
+  .rod{background:linear-gradient(180deg,#dcc48f,#a8894e);box-shadow:0 1px 2px rgba(0,0,0,.3)}
+  .hanger::before{border-color:#a8894e;border-bottom-color:transparent}
+  .ownerbtn{
+    border-radius:0;font-family:"Jost",sans-serif;font-weight:500;font-size:10px;
+    letter-spacing:.18em;text-transform:uppercase;padding:5px 12px;
+  }
+  .mlabel{letter-spacing:.08em;text-transform:uppercase;font-size:9px}
+
+  /* Wardrobe */
+  .photocard{border-radius:2px}
+  .photocard .badge{border-radius:0;letter-spacing:.1em;text-transform:uppercase;font-size:9px;background:var(--brass)}
+  .photocard.busy::after{content:"Your stylist is looking…";font-family:"Jost",sans-serif}
+  .itemcat b{font-family:"Jost",sans-serif;font-weight:500;letter-spacing:.2em;font-size:11px}
+  .chip{border-radius:2px;font-size:12px;font-weight:300;letter-spacing:.03em}
+  .addrow input,.addrow select{border-radius:2px}
+
+  /* AI output — like a note on house stationery */
+  .aiout{
+    font-family:"Cormorant Garamond",Georgia,serif;font-size:17px;line-height:1.75;
+    background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--brass);
+    border-radius:0;padding:20px 22px;
+  }
+  .sketchbox img{border-radius:2px}
+  .field input,.field select{border-radius:2px}
+
+  /* Dialog + toast */
+  dialog{border-radius:4px;padding:26px 28px}
+  dialog input{border-radius:2px}
+  .toast{border-radius:2px;letter-spacing:.06em;font-size:12.5px;background:var(--text)}
+</style>
 </head>
 <body>
 
@@ -330,7 +468,7 @@
     <div class="logo" aria-hidden="true"></div>
     <div>
       <h1>Our Closet</h1>
-      <p class="tag">design it, organize it, get dressed — together</p>
+      <p class="tag">A Private Showroom for Two</p>
     </div>
   </div>
   <div class="names">
@@ -342,17 +480,17 @@
 </header>
 
 <nav class="tabs">
-  <button class="tab active" data-tab="design">🛠 Design</button>
-  <button class="tab" data-tab="wardrobe">📷 Wardrobe</button>
-  <button class="tab" data-tab="outfits">✨ Outfits</button>
-  <button class="tab gear" id="settingsBtn" title="Claude API key">⚙︎ Claude</button>
+  <button class="tab active" data-tab="design">Design</button>
+  <button class="tab" data-tab="wardrobe">Collection</button>
+  <button class="tab" data-tab="outfits">Styling</button>
+  <button class="tab gear" id="settingsBtn" title="Claude API key & sync">Settings</button>
 </nav>
 
 <!-- ================= DESIGN TAB ================= -->
 <main class="tabpane active" id="tab-design">
   <!-- Palette -->
   <div class="card palette-card">
-    <h2>Pieces</h2>
+    <h2>The Pieces</h2>
     <p class="hint">Click a piece to add it to the selected section, or drag it onto any section.</p>
     <div class="palette" id="palette"></div>
   </div>
@@ -398,9 +536,9 @@
 <div class="tabpane" id="tab-wardrobe">
   <div class="wgrid">
     <div class="card">
-      <h2>Closet Photos</h2>
+      <h2>Closet Photographs</h2>
       <p class="hint">Snap pictures of your closet, shelves, or laid-out clothes. Then let Claude catalog what it sees.</p>
-      <label class="btn upload">📷 Add photos
+      <label class="btn upload">Add Photographs
         <input id="photoInput" type="file" accept="image/*" capture="environment" multiple hidden>
       </label>
       <div class="photos" id="photoStrip"></div>
@@ -408,7 +546,7 @@
     </div>
 
     <div class="card">
-      <h2>Wardrobe Items</h2>
+      <h2>The Collection</h2>
       <p class="hint">Everything Claude found, plus anything you add by hand. Click an item's dot to change whose it is.</p>
       <div class="itemlist" id="itemList"><p class="hint">Nothing cataloged yet.</p></div>
       <div class="addrow">
@@ -420,9 +558,9 @@
     </div>
 
     <div class="card span2">
-      <h2>Organize It</h2>
+      <h2>The Arrangement</h2>
       <p class="hint">Claude combines your cataloged wardrobe with your closet design from the Design tab and proposes where everything should live.</p>
-      <button class="btn" id="organizeBtn">🧠 Make us an organizing plan</button>
+      <button class="btn" id="organizeBtn">Compose Our Organizing Plan</button>
       <div class="aiout" id="organizeOut"></div>
     </div>
   </div>
@@ -432,7 +570,7 @@
 <div class="tabpane" id="tab-outfits">
   <div class="ogrid">
     <div class="card">
-      <h2>Pick An Outfit</h2>
+      <h2>Styling Session</h2>
       <p class="hint">Claude picks from your cataloged wardrobe. The more items in the Wardrobe tab, the better the picks.</p>
       <div class="field"><label>Who's getting dressed?</label>
         <select id="outfitWho"></select></div>
@@ -443,10 +581,10 @@
       <div class="field"><label>Vibe (optional)</label>
         <input id="outfitVibe" placeholder="e.g. dressy but comfortable"></div>
       <div class="field"><label style="display:flex;align-items:center;gap:7px;cursor:pointer">
-        <input id="spouseMode" type="checkbox" style="width:auto"> 🎁 Let my spouse pick (Claude channels them)</label></div>
+        <input id="spouseMode" type="checkbox" style="width:auto"> Let my spouse pick — Claude channels them</label></div>
       <div class="actions">
-        <button class="btn" id="outfitBtn">✨ Dress us</button>
-        <button class="btn ghost" id="todayBtn" title="Uses your location for live weather">🌤 Dress me for today</button>
+        <button class="btn" id="outfitBtn">Dress Us</button>
+        <button class="btn ghost" id="todayBtn" title="Uses your location for live weather">Today’s Look</button>
       </div>
     </div>
     <div class="card">
@@ -454,13 +592,13 @@
       <div class="aiout" id="outfitOut"></div>
       <p class="hint" id="outfitEmpty">Fill in the occasion and hit “Dress us.”</p>
       <div class="actions" id="sketchActions" style="display:none;margin-top:12px">
-        <button class="btn" id="sketchBtn">🎨 Sketch it on us</button>
+        <button class="btn" id="sketchBtn">Sketch the Looks</button>
       </div>
       <div class="sketchbox" id="sketchBox"></div>
     </div>
 
     <div class="card">
-      <h2>Packing List</h2>
+      <h2>The Voyage</h2>
       <p class="hint">Going somewhere? Claude packs from clothes you actually own.</p>
       <div class="field"><label>Where to?</label>
         <input id="packDest" placeholder="e.g. Miami, a cabin in the mountains"></div>
@@ -470,7 +608,7 @@
         <input id="packNotes" placeholder="e.g. one nice dinner, lots of walking"></div>
       <div class="field"><label>Packing for</label>
         <select id="packWho"></select></div>
-      <button class="btn" id="packBtn">🧳 Pack for us</button>
+      <button class="btn" id="packBtn">Pack for Us</button>
     </div>
     <div class="card">
       <h2>The Suitcase</h2>
@@ -484,9 +622,25 @@
 <dialog id="settingsDlg">
   <h2>Claude API key</h2>
   <p>The Wardrobe and Outfits features call Claude directly from your browser. Paste an Anthropic API key
-     (from <b>platform.claude.com</b>) — it's stored only in this browser's localStorage, never uploaded anywhere else.</p>
+     (from <b>platform.claude.com</b>) — it's stored only in this browser, never uploaded anywhere else.</p>
   <p id="settingsMsg" style="color:var(--bad)"></p>
   <input id="apiKeyInput" type="password" placeholder="sk-ant-…" autocomplete="off">
+  <div class="actions" style="margin-bottom:16px">
+    <button class="btn ghost" id="revealKeyBtn">👁 Show</button>
+    <button class="btn ghost" id="copyKeyBtn">⧉ Copy</button>
+  </div>
+
+  <h2>Sync between devices</h2>
+  <p>Optional: keep your wardrobe catalog and saved designs in sync across all your devices.
+     Paste a GitHub personal access token (classic) with only the <b>gist</b> scope — from
+     <b>github.com → Settings → Developer settings → Personal access tokens</b>. Use the same token on every
+     device. Photos stay on the device that took them; the items Claude catalogs from them sync everywhere.</p>
+  <input id="ghTokenInput" type="password" placeholder="ghp_… (GitHub token, gist scope only)" autocomplete="off">
+  <div class="actions" style="margin-bottom:16px">
+    <button class="btn ghost" id="syncNowBtn">⇅ Sync now</button>
+    <span class="hint" id="syncStatus" style="align-self:center;margin:0"></span>
+  </div>
+
   <div class="actions">
     <button class="btn" id="saveKeyBtn">Save</button>
     <button class="btn ghost" id="closeDlgBtn">Close</button>
@@ -779,16 +933,20 @@ $("saveBtn").addEventListener("click", ()=>{
   const name = prompt("Name this design:", $("designList").value || "Dream Closet v1");
   if (!name) return;
   const store = readStore();
-  store[name] = state;
+  store[name] = { state, savedAt: Date.now() };
   writeStore(store);
   refreshDesignList(name);
   toast(`Saved “${name}”`);
+  scheduleSync();
 });
 $("designList").addEventListener("change", (e)=>{
   const name = e.target.value;
   if (!name) return;
   const d = readStore()[name];
-  if (d){ state = d; selected = 0; render(); toast(`Loaded “${name}”`); }
+  if (d){
+    state = (d.state !== undefined) ? d.state : d; // older saves stored the bare state
+    selected = 0; render(); toast(`Loaded “${name}”`);
+  }
 });
 $("deleteBtn").addEventListener("click", ()=>{
   const name = $("designList").value;
@@ -797,8 +955,10 @@ $("deleteBtn").addEventListener("click", ()=>{
   const store = readStore();
   delete store[name];
   writeStore(store);
+  markDeletedDesign(name);
   refreshDesignList("");
   toast(`Deleted “${name}”`);
+  scheduleSync();
 });
 $("newBtn").addEventListener("click", ()=>{
   if (!confirm("Start a fresh design? (Unsaved changes will be lost)")) return;
@@ -899,11 +1059,11 @@ async function renderPhotos(){
     img.src = URL.createObjectURL(p.blob);
     img.onload = ()=>URL.revokeObjectURL(img.src);
     card.appendChild(img);
-    if (p.analyzed) card.insertAdjacentHTML("beforeend", `<span class="badge">✓ cataloged</span>`);
+    if (p.analyzed) card.insertAdjacentHTML("beforeend", `<span class="badge">Cataloged</span>`);
     const acts = document.createElement("div");
     acts.className = "pc-actions";
     const an = document.createElement("button");
-    an.textContent = p.analyzed ? "↻ Re-analyze" : "✨ Analyze";
+    an.textContent = p.analyzed ? "Re-analyze" : "Analyze";
     an.addEventListener("click", ()=>analyzePhoto(p, card));
     const del = document.createElement("button");
     del.textContent = "✕";
@@ -945,13 +1105,19 @@ async function renderItems(){
       dot.title = `${ownerName(item.owner)} — click to change`;
       dot.addEventListener("click", async ()=>{
         item.owner = OWNERS[(OWNERS.indexOf(item.owner)+1) % OWNERS.length];
-        await dbPut("items", item);
+        await putItem(item);
         renderItems();
+        scheduleSync();
       });
       const x = document.createElement("button");
       x.className = "x";
       x.textContent = "✕";
-      x.addEventListener("click", async ()=>{ await dbDel("items", item.id); renderItems(); });
+      x.addEventListener("click", async ()=>{
+        await dbDel("items", item.id);
+        markDeletedItem(item.id);
+        renderItems();
+        scheduleSync();
+      });
       chip.append(dot, document.createTextNode(item.name + " "), x);
       chips.appendChild(chip);
     });
@@ -979,12 +1145,157 @@ $("newItemCat").innerHTML = ITEM_CATS.map(c=>`<option>${c}</option>`).join("");
 $("addItemBtn").addEventListener("click", async ()=>{
   const name = $("newItemName").value.trim();
   if (!name) return toast("Give the item a name first");
-  await dbPut("items", {
+  await putItem({
     id: uid(), name, category: $("newItemCat").value,
     owner: $("newItemOwner").value, color: "", createdAt: Date.now(),
   });
   $("newItemName").value = "";
   renderItems();
+  scheduleSync();
+});
+
+/* ============================================================
+   SYNC — wardrobe items + saved designs via a secret GitHub gist
+   ============================================================ */
+const SYNC_TOKEN_STORE = "closet-gh-token";
+const TOMB_STORE = "closet-tombstones";
+const GIST_FILE = "closet-sync.json";
+
+function tombs(){
+  try{ return JSON.parse(localStorage.getItem(TOMB_STORE)) || {items:{}, designs:{}}; }
+  catch{ return {items:{}, designs:{}}; }
+}
+function saveTombs(t){ localStorage.setItem(TOMB_STORE, JSON.stringify(t)); }
+function markDeletedItem(id){ const t = tombs(); t.items[id] = Date.now(); saveTombs(t); }
+function markDeletedDesign(name){ const t = tombs(); t.designs[name] = Date.now(); saveTombs(t); }
+
+async function putItem(item){
+  item.updatedAt = Date.now();
+  await dbPut("items", item);
+}
+
+let syncTimer = null, syncing = false;
+let gistId = localStorage.getItem("closet-gist-id") || null;
+
+function scheduleSync(){
+  if (!localStorage.getItem(SYNC_TOKEN_STORE)) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(()=>syncNow().catch(()=>{}), 2500);
+}
+
+async function gh(path, opts = {}){
+  const token = localStorage.getItem(SYNC_TOKEN_STORE);
+  const r = await fetch("https://api.github.com" + path, {
+    ...opts,
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Accept": "application/vnd.github+json",
+      ...(opts.body ? {"Content-Type": "application/json"} : {}),
+    },
+  });
+  if (!r.ok) throw new Error("GitHub " + r.status);
+  return r.status === 204 ? null : r.json();
+}
+
+async function findGist(){
+  if (gistId){
+    try{ return await gh("/gists/" + gistId); }
+    catch{ gistId = null; localStorage.removeItem("closet-gist-id"); }
+  }
+  const gists = await gh("/gists?per_page=100");
+  const g = gists.find(g => g.files && g.files[GIST_FILE]);
+  if (g){
+    gistId = g.id;
+    localStorage.setItem("closet-gist-id", g.id);
+    return gh("/gists/" + g.id);
+  }
+  return null;
+}
+
+const normDesign = (v)=> (v && v.state) ? v : { state: v, savedAt: 0 };
+
+async function syncNow(interactive){
+  if (syncing || !localStorage.getItem(SYNC_TOKEN_STORE)) return;
+  syncing = true;
+  const status = $("syncStatus");
+  try{
+    status.textContent = "Syncing…";
+    let remote = { items:{}, deleted:{}, designs:{}, deletedDesigns:{} };
+    const g = await findGist();
+    if (g){
+      try{
+        const f = g.files[GIST_FILE];
+        const content = f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+        remote = { ...remote, ...JSON.parse(content) };
+      }catch{ /* corrupt remote — rebuild from local */ }
+    }
+
+    // Items: newest-wins per id, deletions win via tombstones
+    const t = tombs();
+    const merged = {};
+    for (const it of await dbAll("items")){
+      merged[it.id] = { ...it, updatedAt: it.updatedAt || it.createdAt || 0 };
+    }
+    for (const [id, rit] of Object.entries(remote.items || {})){
+      const lit = merged[id];
+      if (!lit || (rit.updatedAt || 0) > (lit.updatedAt || 0)) merged[id] = rit;
+    }
+    const dead = { ...(remote.deleted || {}) };
+    for (const [id, ts] of Object.entries(t.items)) dead[id] = Math.max(ts, dead[id] || 0);
+    for (const [id, ts] of Object.entries(dead)){
+      if (merged[id] && ts >= (merged[id].updatedAt || 0)) delete merged[id];
+    }
+    const d = await db();
+    await new Promise((res, rej)=>{
+      const tx = d.transaction("items", "readwrite");
+      tx.objectStore("items").clear();
+      for (const it of Object.values(merged)) tx.objectStore("items").put(it);
+      tx.oncomplete = res;
+      tx.onerror = ()=>rej(tx.error);
+    });
+
+    // Designs: newest-wins per name
+    const mergedD = {};
+    for (const [n, v] of Object.entries(readStore())) mergedD[n] = normDesign(v);
+    for (const [n, v] of Object.entries(remote.designs || {})){
+      if (!mergedD[n] || (v.savedAt || 0) > (mergedD[n].savedAt || 0)) mergedD[n] = v;
+    }
+    const deadD = { ...(remote.deletedDesigns || {}) };
+    for (const [n, ts] of Object.entries(t.designs)) deadD[n] = Math.max(ts, deadD[n] || 0);
+    for (const [n, ts] of Object.entries(deadD)){
+      if (mergedD[n] && ts >= (mergedD[n].savedAt || 0)) delete mergedD[n];
+    }
+    writeStore(mergedD);
+
+    const payload = { v:1, updatedAt: Date.now(), items: merged, deleted: dead, designs: mergedD, deletedDesigns: deadD };
+    const body = JSON.stringify({
+      description: "Our Closet app — sync data",
+      public: false,
+      files: { [GIST_FILE]: { content: JSON.stringify(payload) } },
+    });
+    if (gistId) await gh("/gists/" + gistId, { method:"PATCH", body });
+    else{
+      const ng = await gh("/gists", { method:"POST", body });
+      gistId = ng.id;
+      localStorage.setItem("closet-gist-id", ng.id);
+    }
+    renderItems();
+    refreshDesignList($("designList").value);
+    status.textContent = "✓ Synced " + new Date().toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+    if (interactive) toast("Synced across your devices");
+  }catch(err){
+    status.textContent = "Sync failed — check the token.";
+    if (interactive) toast("Sync failed: " + (err.message || "unknown error"));
+  }finally{
+    syncing = false;
+  }
+}
+$("syncNowBtn").addEventListener("click", ()=>{
+  if (!$("ghTokenInput").value.trim() && !localStorage.getItem(SYNC_TOKEN_STORE))
+    return toast("Paste a GitHub token first");
+  if ($("ghTokenInput").value.trim())
+    localStorage.setItem(SYNC_TOKEN_STORE, $("ghTokenInput").value.trim());
+  syncNow(true);
 });
 
 /* ============================================================
@@ -996,17 +1307,35 @@ let clientPromise = null;
 function openSettings(msg){
   $("settingsMsg").textContent = msg || "";
   $("apiKeyInput").value = localStorage.getItem(KEY_STORE) || "";
+  $("ghTokenInput").value = localStorage.getItem(SYNC_TOKEN_STORE) || "";
   $("settingsDlg").showModal();
 }
 $("settingsBtn").addEventListener("click", ()=>openSettings());
 $("closeDlgBtn").addEventListener("click", ()=>$("settingsDlg").close());
 $("saveKeyBtn").addEventListener("click", ()=>{
   const key = $("apiKeyInput").value.trim();
-  if (!key) return openSettings("That key looks empty.");
-  localStorage.setItem(KEY_STORE, key);
-  clientPromise = null; // rebuild client with the new key
+  const ghToken = $("ghTokenInput").value.trim();
+  if (key && key !== localStorage.getItem(KEY_STORE)){
+    localStorage.setItem(KEY_STORE, key);
+    clientPromise = null; // rebuild client with the new key
+  }
+  const hadToken = !!localStorage.getItem(SYNC_TOKEN_STORE);
+  if (ghToken) localStorage.setItem(SYNC_TOKEN_STORE, ghToken);
+  else localStorage.removeItem(SYNC_TOKEN_STORE);
   $("settingsDlg").close();
-  toast("Key saved (in this browser only)");
+  toast("Saved (in this browser only)");
+  if (ghToken && !hadToken) syncNow(true);
+});
+$("revealKeyBtn").addEventListener("click", ()=>{
+  const inp = $("apiKeyInput");
+  inp.type = inp.type === "password" ? "text" : "password";
+  $("revealKeyBtn").textContent = inp.type === "password" ? "👁 Show" : "🙈 Hide";
+});
+$("copyKeyBtn").addEventListener("click", async ()=>{
+  const key = $("apiKeyInput").value || localStorage.getItem(KEY_STORE) || "";
+  if (!key) return toast("No key saved yet");
+  try{ await navigator.clipboard.writeText(key); toast("Key copied — paste it on your other devices"); }
+  catch{ toast("Couldn't copy — use 👁 Show and copy it by hand"); }
 });
 
 async function getClient(){
@@ -1117,7 +1446,7 @@ List every distinct clothing item, pair of shoes, or accessory you can identify.
     const data = JSON.parse(text);
     let added = 0;
     for (const it of data.items){
-      await dbPut("items", {
+      await putItem({
         id: uid(), name: it.name, category: it.category, color: it.color,
         owner: it.owner === "unknown" ? "S" : it.owner,
         photoId: photo.id, createdAt: Date.now() + added,
@@ -1128,6 +1457,7 @@ List every distinct clothing item, pair of shoes, or accessory you can identify.
     await dbPut("photos", photo);
     renderPhotos();
     renderItems();
+    scheduleSync();
     toast(`Cataloged ${added} item${added===1?"":"s"} — ${data.observations}`);
   }catch(err){
     if (err instanceof SyntaxError) toast("Couldn't parse Claude's answer — try again.");
@@ -1160,7 +1490,7 @@ $("organizeBtn").addEventListener("click", async ()=>{
   if (!wardrobe) return toast("Catalog some items first (analyze a photo or add by hand)");
   const btn = $("organizeBtn"), out = $("organizeOut");
   btn.disabled = true;
-  out.textContent = "Claude is thinking about your closet…";
+  out.textContent = "Your stylist is considering the space…";
   try{
     const resp = await callClaude({
       model: "claude-opus-5",
@@ -1212,7 +1542,7 @@ async function generateOutfits(){
   $("sketchActions").style.display = "none";
   $("sketchBox").innerHTML = "";
   lastLooks = null;
-  out.textContent = "Claude is raiding the closet…";
+  out.textContent = "Your stylist is choosing…";
   const wardrobeText = relevant.map(i=>`- ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}]`).join("\n");
   const whoText = who === "both" ? `both ${state.nameA} and ${state.nameB} (coordinate their looks!)` : ownerName(who);
 
@@ -1309,7 +1639,7 @@ $("sketchBtn").addEventListener("click", async ()=>{
   if (!lastLooks) return;
   const btn = $("sketchBtn"), box = $("sketchBox");
   btn.disabled = true;
-  box.innerHTML = '<p class="hint">🎨 Claude is at the drawing board…</p>';
+  box.innerHTML = '<p class="hint">Your stylist is at the drawing board…</p>';
   try{
     const resp = await callClaude({
       model: "claude-opus-5",
@@ -1357,7 +1687,7 @@ $("packBtn").addEventListener("click", async ()=>{
   const btn = $("packBtn"), out = $("packOut");
   btn.disabled = true;
   $("packEmpty").style.display = "none";
-  out.textContent = "Claude is folding shirts…";
+  out.textContent = "Your stylist is folding…";
   const wardrobeText = relevant.map(i=>`- ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}]`).join("\n");
   const whoText = who === "both" ? `${state.nameA} and ${state.nameB}` : ownerName(who);
 
@@ -1399,6 +1729,7 @@ refreshDesignList("");
 render();
 renderPhotos();
 renderItems();
+if (localStorage.getItem(SYNC_TOKEN_STORE)) syncNow().catch(()=>{});
 </script>
 </body>
 </html>
