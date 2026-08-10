@@ -352,11 +352,12 @@
 
   <!-- Stage -->
   <div class="card">
-    <h2>The Closet</h2>
-    <p class="hint">Click a section to select it. The colored tab shows whose section it is — click the tab to trade.</p>
+    <h2>The Walk-In</h2>
+    <p class="hint">Walls are unrolled left-to-right: his wall → back wall → her wall. Click a section to select it; click the colored tab to trade it.</p>
     <div class="dims">
       <label>Height <input id="cHeight" type="number" min="48" max="144" step="1"> in</label>
-      <label>Sections stack top-to-bottom; widths are per section below.</label>
+      <label><input id="hasDresser" type="checkbox"> 🗄️ 6-drawer dresser in the bedroom</label>
+      <label><input id="hasSpare" type="checkbox"> 🚪 spare closet downstairs</label>
     </div>
     <div class="stagewrap">
       <div style="padding:34px 4px 40px 4px;display:inline-block">
@@ -505,12 +506,17 @@ const CATALOG = {
 const OWNERS = ["A","B","S"];
 const SCALE = 3.4; // px per inch
 
+// Starter layout for a walk-in: unroll the walls left-to-right —
+// his wall, then the shared back wall, then her wall. The 6-drawer
+// dresser lives in the bedroom, so the closet skips big drawer stacks.
 const DEFAULT = () => ({
-  nameA:"Draymond", nameB:"My Wife", height:96,
+  nameA:"Draymond", nameB:"My Wife", height:96, dresser:true, spareCloset:true,
   sections:[
     { width:36, owner:"A", modules:["hang","hang","shoe"] },
-    { width:24, owner:"S", modules:["shelf","drawers3","drawers3","cubby"] },
-    { width:36, owner:"B", modules:["longhang","shelf","shoe"] },
+    { width:24, owner:"A", modules:["longhang","shelf","shoe"] },
+    { width:24, owner:"S", modules:["shelf","shelf","cubby","hamper"] },
+    { width:24, owner:"B", modules:["longhang","shelf","shoe"] },
+    { width:36, owner:"B", modules:["hang","hang","shoe"] },
   ],
 });
 let state = DEFAULT();
@@ -557,6 +563,8 @@ function render(){
   $("nameA").value = state.nameA;
   $("nameB").value = state.nameB;
   $("cHeight").value = state.height;
+  $("hasDresser").checked = !!state.dresser;
+  $("hasSpare").checked = !!state.spareCloset;
   closetEl.innerHTML = "";
   if (selected >= state.sections.length) selected = state.sections.length - 1;
 
@@ -704,10 +712,15 @@ function renderSummary(){
   }
 
   const totalW = state.sections.reduce((t,s)=>t+s.width, 0);
+  const elsewhere = [
+    state.dresser ? `<div class="row"><span>🗄️ Bedroom dresser</span><span>6 drawers (3 each)</span></div>` : "",
+    state.spareCloset ? `<div class="row"><span>🚪 Spare closet downstairs</span><span>off-season & overflow</span></div>` : "",
+  ].join("");
   summaryEl.innerHTML = `
     <h2>The Verdict</h2>
-    <p class="hint">Closet: ${totalW}" wide × ${state.height}" tall (${(totalW/12).toFixed(1)} ft)</p>
+    <p class="hint">Walk-in: ${totalW}" of wall × ${state.height}" tall (${(totalW/12).toFixed(1)} ft)</p>
     ${row("A")}${row("B")}${row("S")}
+    ${elsewhere ? `<h3>Elsewhere</h3>${elsewhere}` : ""}
     <div class="fair">${fair}</div>
     <h3>Shopping list</h3>
     ${Object.entries(parts).map(([k,n])=>
@@ -772,6 +785,8 @@ $("cHeight").addEventListener("change", (e)=>{
   state.height = Math.min(144, Math.max(48, parseInt(e.target.value)||96));
   render();
 });
+$("hasDresser").addEventListener("change", (e)=>{ state.dresser = e.target.checked; renderSummary(); });
+$("hasSpare").addEventListener("change", (e)=>{ state.spareCloset = e.target.checked; renderSummary(); });
 $("addSection").addEventListener("click", ()=>{
   state.sections.push({ width:24, owner:"S", modules:[] });
   selected = state.sections.length - 1;
@@ -1084,10 +1099,15 @@ List every distinct clothing item, pair of shoes, or accessory you can identify.
 
 /* ---------- Organizing plan ---------- */
 function describeClosetDesign(){
-  return state.sections.map((sec, i)=>{
+  const walls = state.sections.map((sec, i)=>{
     const mods = sec.modules.map(k=>`${CATALOG[k].label} (${CATALOG[k].h}")`).join(", ") || "empty";
     return `Section ${i+1}: ${sec.width}" wide, assigned to ${ownerName(sec.owner)} — contains: ${mods}`;
   }).join("\n");
+  const extras = [
+    state.dresser ? `They also have a 6-drawer dresser in the bedroom (plan on 3 drawers per person for folded clothes: underwear/socks, tees/gym wear, jeans/loungewear).` : "",
+    state.spareCloset ? `They also have a spare closet downstairs — good for off-season clothes, occasion wear, and overflow.` : "",
+  ].filter(Boolean).join("\n");
+  return walls + (extras ? "\n" + extras : "");
 }
 async function describeWardrobe(){
   const items = await dbAll("items");
