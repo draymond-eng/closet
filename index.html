@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Our Closet Designer</title>
+<style>
+  :root{
+    --bg:#f6f1e8;
+    --bg2:#efe7d8;
+    --panel:#fffdf8;
+    --line:#ddd2bf;
+    --wood:#8a6845;
+    --wood-dark:#6b4f33;
+    --wood-light:#c9a97e;
+    --text:#3a2f24;
+    --muted:#8c7d68;
+    --a:#3a7bd5;      /* person A */
+    --a-soft:#e3edfb;
+    --b:#d55a8a;      /* person B */
+    --b-soft:#fbe6ef;
+    --s:#5aab6e;      /* shared */
+    --s-soft:#e5f3e8;
+    --bad:#c94f42;
+    --shadow:0 10px 28px rgba(80,60,30,.14);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:Georgia,"Times New Roman",serif;
+    background:
+      radial-gradient(900px 500px at 50% -10%, #fbf7ef 0%, var(--bg) 65%);
+    color:var(--text);
+    min-height:100vh;
+  }
+  button{font-family:inherit;cursor:pointer}
+  input,select{font-family:inherit}
+
+  header{
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+    gap:14px;padding:18px 26px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#fffdf8,transparent);
+  }
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{
+    width:46px;height:46px;border-radius:10px;flex:none;
+    background:
+      linear-gradient(90deg,transparent 46%,#fffdf8 46%,#fffdf8 54%,transparent 54%),
+      repeating-linear-gradient(180deg,var(--wood-light) 0 10px,var(--wood) 10px 12px);
+    border:2px solid var(--wood-dark);
+    box-shadow:var(--shadow);
+  }
+  h1{margin:0;font-size:22px;letter-spacing:.3px}
+  .tag{margin:2px 0 0;font-size:13px;color:var(--muted);font-style:italic}
+
+  .names{display:flex;gap:10px;flex-wrap:wrap}
+  .namechip{
+    display:flex;align-items:center;gap:8px;padding:6px 12px;
+    border-radius:999px;border:1.5px solid var(--line);background:var(--panel);
+  }
+  .namechip .dot{width:12px;height:12px;border-radius:50%}
+  .namechip input{
+    border:none;background:transparent;font-size:14px;width:110px;outline:none;color:var(--text);
+  }
+
+  main{display:grid;grid-template-columns:250px 1fr 270px;gap:18px;padding:18px 26px;align-items:start}
+  @media (max-width:1050px){ main{grid-template-columns:1fr} }
+
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px;
+  }
+  .card h2{margin:0 0 4px;font-size:15px;text-transform:uppercase;letter-spacing:1.2px;color:var(--wood-dark)}
+  .card .hint{margin:0 0 12px;font-size:12.5px;color:var(--muted)}
+
+  /* ---------- Palette ---------- */
+  .palette{display:flex;flex-direction:column;gap:8px}
+  .pitem{
+    display:flex;align-items:center;gap:10px;padding:9px 11px;text-align:left;
+    border:1.5px solid var(--line);border-radius:10px;background:#fffef9;
+    transition:transform .08s, border-color .08s;
+  }
+  .pitem:hover{border-color:var(--wood);transform:translateX(2px)}
+  .pitem .ic{font-size:19px;width:26px;text-align:center;flex:none}
+  .pitem b{font-size:13.5px;display:block}
+  .pitem span{font-size:11.5px;color:var(--muted)}
+
+  /* ---------- Closet stage ---------- */
+  .stagewrap{overflow-x:auto;padding-bottom:6px}
+  .dims{
+    display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:14px;font-size:13.5px
+  }
+  .dims label{display:flex;align-items:center;gap:6px;color:var(--muted)}
+  .dims input{
+    width:64px;padding:5px 7px;border:1.5px solid var(--line);border-radius:8px;
+    background:#fffef9;font-size:13.5px;color:var(--text);
+  }
+  .closet{
+    display:inline-flex;align-items:stretch;gap:0;
+    border:10px solid var(--wood-dark);border-top-width:14px;border-radius:6px;
+    background:repeating-linear-gradient(180deg,#f3ead9 0 26px,#efe4cf 26px 52px);
+    box-shadow:var(--shadow), inset 0 0 40px rgba(107,79,51,.12);
+  }
+  .section{
+    position:relative;display:flex;flex-direction:column;flex:none;
+    border-right:6px solid var(--wood);
+  }
+  .section:last-child{border-right:none}
+  .section.selected{outline:3px dashed var(--wood);outline-offset:-3px}
+  .section.dragover{background:rgba(138,104,69,.12)}
+  .sec-head{
+    position:absolute;top:-14px;left:0;right:0;transform:translateY(-100%);
+    display:flex;justify-content:center;padding-bottom:6px;
+  }
+  .ownerbtn{
+    border:none;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:bold;
+    letter-spacing:.4px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.15);
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .sec-foot{
+    position:absolute;bottom:-10px;left:0;right:0;transform:translateY(100%);
+    display:flex;align-items:center;justify-content:center;gap:5px;padding-top:6px;
+  }
+  .sec-foot input{
+    width:46px;padding:2px 4px;font-size:12px;text-align:center;
+    border:1.5px solid var(--line);border-radius:6px;background:#fffef9;color:var(--text);
+  }
+  .sec-foot .unit{font-size:11px;color:var(--muted)}
+  .sec-foot button{
+    border:1.5px solid var(--line);background:#fffef9;border-radius:6px;
+    font-size:11px;line-height:1;padding:3px 6px;color:var(--muted);
+  }
+  .sec-foot button:hover{color:var(--bad);border-color:var(--bad)}
+
+  /* ---------- Modules ---------- */
+  .module{
+    position:relative;flex:none;overflow:hidden;
+    border-bottom:5px solid var(--wood);
+  }
+  .module:last-child{border-bottom:none}
+  .module .mlabel{
+    position:absolute;left:6px;bottom:4px;font-size:10.5px;color:var(--wood-dark);
+    background:rgba(255,253,248,.75);padding:1px 6px;border-radius:6px;pointer-events:none;white-space:nowrap;
+  }
+  .module .mtools{
+    position:absolute;top:3px;right:3px;display:none;gap:3px;z-index:3;
+  }
+  .module:hover .mtools{display:flex}
+  .mtools button{
+    width:21px;height:21px;border-radius:6px;border:1px solid var(--line);
+    background:#fffdf8;font-size:11px;line-height:1;padding:0;color:var(--text);
+  }
+  .mtools button:hover{border-color:var(--wood)}
+  .rod{
+    position:absolute;top:11px;left:5%;right:5%;height:5px;border-radius:3px;
+    background:linear-gradient(180deg,#e8e0d0,#a09484);box-shadow:0 1px 2px rgba(0,0,0,.25);
+  }
+  .hanger{
+    position:absolute;top:14px;width:16%;bottom:12%;border-radius:4px 4px 8px 8px;
+    background:linear-gradient(180deg,rgba(138,104,69,.30),rgba(138,104,69,.12));
+    border:1px solid rgba(107,79,51,.25);
+  }
+  .hanger::before{
+    content:"";position:absolute;top:-8px;left:50%;width:8px;height:8px;
+    border:2px solid #a09484;border-radius:50%;border-bottom-color:transparent;transform:translateX(-50%);
+  }
+  .drawerbox{position:absolute;inset:4px 6px;display:flex;flex-direction:column;gap:3px}
+  .drawer{
+    flex:1;border-radius:4px;border:1px solid var(--wood);
+    background:linear-gradient(180deg,#d9bf98,#c9a97e);position:relative;
+  }
+  .drawer::after{
+    content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:26%;height:4px;border-radius:3px;background:var(--wood-dark);
+  }
+  .shelfline{position:absolute;left:0;right:0;bottom:0;height:0}
+  .shoes{position:absolute;inset:auto 4px 6px 4px;display:flex;gap:4px;justify-content:center;font-size:13px}
+  .cubbybox{position:absolute;inset:4px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px}
+  .cubby{border:1.5px solid var(--wood);border-radius:3px;background:rgba(255,253,248,.4)}
+  .hamperbox{
+    position:absolute;inset:14% 18% 8% 18%;border-radius:6px 6px 10px 10px;
+    background:repeating-linear-gradient(90deg,#d9c9a8 0 7px,#c6b28c 7px 14px);
+    border:2px solid var(--wood);
+  }
+  .overflow-flag{
+    position:absolute;left:0;right:0;top:0;padding:3px 6px;text-align:center;
+    background:var(--bad);color:#fff;font-size:11px;z-index:4;pointer-events:none;
+  }
+
+  /* ---------- Right column ---------- */
+  .summary .row{display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;border-bottom:1px dashed var(--line)}
+  .summary .row:last-child{border-bottom:none}
+  .summary .who{display:flex;align-items:center;gap:7px}
+  .summary .who .dot{width:10px;height:10px;border-radius:50%}
+  .summary h3{margin:14px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--wood-dark)}
+  .fair{
+    margin-top:12px;padding:9px 11px;border-radius:10px;font-size:12.5px;line-height:1.45;
+    background:var(--bg2);border:1px solid var(--line);font-style:italic;color:var(--wood-dark);
+  }
+
+  .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .btn{
+    padding:8px 14px;border-radius:10px;border:1.5px solid var(--wood);
+    background:var(--wood);color:#fffdf8;font-size:13.5px;letter-spacing:.3px;
+  }
+  .btn:hover{background:var(--wood-dark)}
+  .btn.ghost{background:transparent;color:var(--wood-dark)}
+  .btn.ghost:hover{background:var(--bg2)}
+  select.designs{
+    padding:8px 10px;border-radius:10px;border:1.5px solid var(--line);
+    background:#fffef9;font-size:13.5px;color:var(--text);max-width:100%;
+  }
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);
+    background:var(--wood-dark);color:#fffdf8;padding:10px 20px;border-radius:999px;
+    font-size:14px;box-shadow:var(--shadow);transition:transform .25s;z-index:50;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0)}
+
+  @media print{
+    header .names, .palette-card, .actions-card, .sec-foot button, .mtools, .dims{display:none !important}
+    body{background:#fff}
+    main{display:block;padding:10px}
+    .card{box-shadow:none;border:none;padding:6px;page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo" aria-hidden="true"></div>
+    <div>
+      <h1>Our Closet Designer</h1>
+      <p class="tag">design it together, before the drill comes out</p>
+    </div>
+  </div>
+  <div class="names">
+    <label class="namechip"><span class="dot" style="background:var(--a)"></span>
+      <input id="nameA" value="Draymond" maxlength="14" aria-label="First person's name"></label>
+    <label class="namechip"><span class="dot" style="background:var(--b)"></span>
+      <input id="nameB" value="My Wife" maxlength="14" aria-label="Second person's name"></label>
+  </div>
+</header>
+
+<main>
+  <!-- Palette -->
+  <div class="card palette-card">
+    <h2>Pieces</h2>
+    <p class="hint">Click a piece to add it to the selected section, or drag it onto any section.</p>
+    <div class="palette" id="palette"></div>
+  </div>
+
+  <!-- Stage -->
+  <div class="card">
+    <h2>The Closet</h2>
+    <p class="hint">Click a section to select it. The colored tab shows whose section it is — click the tab to trade.</p>
+    <div class="dims">
+      <label>Height <input id="cHeight" type="number" min="48" max="144" step="1"> in</label>
+      <label>Sections stack top-to-bottom; widths are per section below.</label>
+    </div>
+    <div class="stagewrap">
+      <div style="padding:34px 4px 40px 4px;display:inline-block">
+        <div class="closet" id="closet"></div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="addSection">+ Add section</button>
+    </div>
+  </div>
+
+  <!-- Summary + save -->
+  <div>
+    <div class="card summary" id="summary"></div>
+    <div class="card actions-card" style="margin-top:18px">
+      <h2>Designs</h2>
+      <div class="actions">
+        <button class="btn" id="saveBtn">Save</button>
+        <button class="btn ghost" id="newBtn">Start fresh</button>
+        <button class="btn ghost" id="printBtn">Print spec</button>
+      </div>
+      <div class="actions" style="margin-top:10px">
+        <select class="designs" id="designList"><option value="">— saved designs —</option></select>
+        <button class="btn ghost" id="deleteBtn" title="Delete selected design">✕</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------- Catalog ---------- */
+const CATALOG = {
+  longhang:{ label:"Long Hang",   ic:"🧥", h:66, rod:true,  desc:'66" — dresses & coats' },
+  hang:    { label:"Hang Zone",   ic:"👔", h:42, rod:true,  desc:'42" — shirts & pants (stack two!)' },
+  shelf:   { label:"Shelf",       ic:"📦", h:12, shelf:true,desc:'12" — sweaters & bins' },
+  shoe:    { label:"Shoe Shelf",  ic:"👟", h:8,  shoe:true, desc:'8" — one row of shoes' },
+  drawers2:{ label:"2 Drawers",   ic:"🗄️", h:16, drawers:2, desc:'16" — socks & small stuff' },
+  drawers3:{ label:"3 Drawers",   ic:"🗄️", h:24, drawers:3, desc:'24" — folded everything' },
+  cubby:   { label:"Cubbies",     ic:"🧺", h:24, cubby:true,desc:'24" — bags & hats' },
+  hamper:  { label:"Hamper",      ic:"🧦", h:30, hamper:true,desc:'30" — pull-out laundry' },
+  open:    { label:"Open Space",  ic:"⬜", h:12, open:true, desc:'12" — breathing room' },
+};
+const OWNERS = ["A","B","S"];
+const SCALE = 3.4; // px per inch
+
+/* ---------- State ---------- */
+const DEFAULT = () => ({
+  nameA:"Draymond", nameB:"My Wife", height:96,
+  sections:[
+    { width:36, owner:"A", modules:["hang","hang","shoe"] },
+    { width:24, owner:"S", modules:["shelf","drawers3","drawers3","cubby"] },
+    { width:36, owner:"B", modules:["longhang","shelf","shoe"] },
+  ],
+});
+let state = DEFAULT();
+let selected = 0;
+
+const $ = (id)=>document.getElementById(id);
+const closetEl=$("closet"), summaryEl=$("summary"), toastEl=$("toast");
+
+function ownerColor(o){ return o==="A" ? "var(--a)" : o==="B" ? "var(--b)" : "var(--s)"; }
+function ownerSoft(o){ return o==="A" ? "var(--a-soft)" : o==="B" ? "var(--b-soft)" : "var(--s-soft)"; }
+function ownerName(o){ return o==="A" ? state.nameA : o==="B" ? state.nameB : "Shared"; }
+
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>toastEl.classList.remove("show"), 2200);
+}
+
+/* ---------- Palette ---------- */
+function buildPalette(){
+  const pal = $("palette");
+  pal.innerHTML = "";
+  for (const [key,m] of Object.entries(CATALOG)){
+    const b = document.createElement("button");
+    b.className = "pitem";
+    b.draggable = true;
+    b.innerHTML = `<span class="ic">${m.ic}</span><span><b>${m.label}</b><span>${m.desc}</span></span>`;
+    b.addEventListener("click", ()=>addModule(selected, key));
+    b.addEventListener("dragstart", (e)=>e.dataTransfer.setData("text/plain", key));
+    pal.appendChild(b);
+  }
+}
+
+/* ---------- Mutations ---------- */
+function addModule(si, key){
+  const sec = state.sections[si];
+  if (!sec) return toast("Select a section first");
+  sec.modules.push(key);
+  const used = sec.modules.reduce((t,k)=>t+CATALOG[k].h, 0);
+  if (used > state.height) toast(`Heads up — that section is ${used - state.height}" over`);
+  render();
+}
+function removeModule(si, mi){ state.sections[si].modules.splice(mi,1); render(); }
+function moveModule(si, mi, dir){
+  const mods = state.sections[si].modules, j = mi + dir;
+  if (j < 0 || j >= mods.length) return;
+  [mods[mi], mods[j]] = [mods[j], mods[mi]];
+  render();
+}
+function cycleOwner(si){
+  const sec = state.sections[si];
+  sec.owner = OWNERS[(OWNERS.indexOf(sec.owner)+1) % OWNERS.length];
+  render();
+}
+
+/* ---------- Render ---------- */
+function render(){
+  $("nameA").value = state.nameA;
+  $("nameB").value = state.nameB;
+  $("cHeight").value = state.height;
+  closetEl.innerHTML = "";
+  if (selected >= state.sections.length) selected = state.sections.length - 1;
+
+  state.sections.forEach((sec, si)=>{
+    const el = document.createElement("div");
+    el.className = "section" + (si===selected ? " selected" : "");
+    el.style.width = (sec.width * SCALE) + "px";
+    el.style.height = (state.height * SCALE) + "px";
+    el.style.background = ownerSoft(sec.owner);
+    el.addEventListener("click", ()=>{ selected = si; render(); });
+    el.addEventListener("dragover", (e)=>{ e.preventDefault(); el.classList.add("dragover"); });
+    el.addEventListener("dragleave", ()=>el.classList.remove("dragover"));
+    el.addEventListener("drop", (e)=>{
+      e.preventDefault();
+      const key = e.dataTransfer.getData("text/plain");
+      if (CATALOG[key]){ selected = si; addModule(si, key); }
+    });
+
+    // owner tab
+    const head = document.createElement("div");
+    head.className = "sec-head";
+    const ob = document.createElement("button");
+    ob.className = "ownerbtn";
+    ob.style.background = ownerColor(sec.owner);
+    ob.textContent = ownerName(sec.owner);
+    ob.title = "Click to change whose section this is";
+    ob.addEventListener("click", (e)=>{ e.stopPropagation(); cycleOwner(si); });
+    head.appendChild(ob);
+    el.appendChild(head);
+
+    // overflow flag
+    const used = sec.modules.reduce((t,k)=>t+CATALOG[k].h, 0);
+    if (used > state.height){
+      const f = document.createElement("div");
+      f.className = "overflow-flag";
+      f.textContent = `${used - state.height}" over — remove something`;
+      el.appendChild(f);
+    }
+
+    // modules
+    sec.modules.forEach((key, mi)=>{
+      const m = CATALOG[key];
+      const mod = document.createElement("div");
+      mod.className = "module";
+      mod.style.height = (m.h * SCALE) + "px";
+      if (m.rod){
+        mod.insertAdjacentHTML("beforeend", `<div class="rod"></div>`);
+        const n = Math.max(2, Math.floor(sec.width / 8));
+        for (let i=0;i<n;i++){
+          mod.insertAdjacentHTML("beforeend",
+            `<div class="hanger" style="left:${6 + i*(88/n)}%"></div>`);
+        }
+      }
+      if (m.drawers){
+        mod.insertAdjacentHTML("beforeend",
+          `<div class="drawerbox">${'<div class="drawer"></div>'.repeat(m.drawers)}</div>`);
+      }
+      if (m.shoe){
+        const n = Math.max(2, Math.floor(sec.width / 9));
+        mod.insertAdjacentHTML("beforeend", `<div class="shoes">${"👟".repeat(n)}</div>`);
+      }
+      if (m.cubby){
+        mod.insertAdjacentHTML("beforeend",
+          `<div class="cubbybox">${'<div class="cubby"></div>'.repeat(4)}</div>`);
+      }
+      if (m.hamper){
+        mod.insertAdjacentHTML("beforeend", `<div class="hamperbox"></div>`);
+      }
+      mod.insertAdjacentHTML("beforeend", `<div class="mlabel">${m.label} · ${m.h}"</div>`);
+
+      const tools = document.createElement("div");
+      tools.className = "mtools";
+      [["▲",()=>moveModule(si,mi,-1)],["▼",()=>moveModule(si,mi,1)],["✕",()=>removeModule(si,mi)]]
+        .forEach(([t,fn])=>{
+          const b = document.createElement("button");
+          b.textContent = t;
+          b.addEventListener("click",(e)=>{ e.stopPropagation(); fn(); });
+          tools.appendChild(b);
+        });
+      mod.appendChild(tools);
+      el.appendChild(mod);
+    });
+
+    // footer: width + delete
+    const foot = document.createElement("div");
+    foot.className = "sec-foot";
+    const w = document.createElement("input");
+    w.type = "number"; w.min = 12; w.max = 60; w.value = sec.width;
+    w.title = "Section width (inches)";
+    w.addEventListener("click",(e)=>e.stopPropagation());
+    w.addEventListener("change", ()=>{
+      sec.width = Math.min(60, Math.max(12, parseInt(w.value)||sec.width));
+      render();
+    });
+    foot.appendChild(w);
+    foot.insertAdjacentHTML("beforeend", `<span class="unit">in</span>`);
+    if (state.sections.length > 1){
+      const del = document.createElement("button");
+      del.textContent = "remove";
+      del.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        state.sections.splice(si,1);
+        if (selected >= state.sections.length) selected = state.sections.length-1;
+        render();
+      });
+      foot.appendChild(del);
+    }
+    el.appendChild(foot);
+    closetEl.appendChild(el);
+  });
+
+  renderSummary();
+}
+
+/* ---------- Summary ---------- */
+function renderSummary(){
+  const tally = { A:{hang:0,shelf:0,drawer:0,shoe:0,width:0}, B:{hang:0,shelf:0,drawer:0,shoe:0,width:0}, S:{hang:0,shelf:0,drawer:0,shoe:0,width:0} };
+  const parts = {};
+  state.sections.forEach(sec=>{
+    const t = tally[sec.owner];
+    t.width += sec.width;
+    sec.modules.forEach(key=>{
+      const m = CATALOG[key];
+      parts[key] = (parts[key]||0) + 1;
+      if (m.rod) t.hang += sec.width;
+      if (m.shelf || m.shoe || m.cubby) t.shelf += 1;
+      if (m.drawers) t.drawer += m.drawers;
+      if (m.shoe) t.shoe += Math.floor(sec.width / 9);
+    });
+  });
+
+  const row = (o)=>{
+    const t = tally[o];
+    return `<div class="row">
+      <span class="who"><span class="dot" style="background:${ownerColor(o)}"></span>${ownerName(o)}</span>
+      <span>${t.width}" wide · ${t.hang}" of rod · ${t.drawer} drawers${t.shoe ? ` · ~${t.shoe} pairs` : ""}</span>
+    </div>`;
+  };
+
+  const a = tally.A, b = tally.B;
+  const totalHang = a.hang + b.hang;
+  let fair;
+  if (totalHang === 0) fair = "No hanging space yet — someone's wardrobe is about to file a complaint.";
+  else {
+    const shareA = Math.round(100 * a.hang / totalHang);
+    if (Math.abs(shareA - 50) <= 10) fair = "Hanging space is basically even. A marriage built to last. 💛";
+    else if (shareA > 50) fair = `${state.nameA} has ${shareA}% of the personal hanging space. ${state.nameB} may want to renegotiate…`;
+    else fair = `${state.nameB} has ${100-shareA}% of the personal hanging space. ${state.nameA} may want to renegotiate…`;
+  }
+
+  const totalW = state.sections.reduce((t,s)=>t+s.width, 0);
+  summaryEl.innerHTML = `
+    <h2>The Verdict</h2>
+    <p class="hint">Closet: ${totalW}" wide × ${state.height}" tall (${(totalW/12).toFixed(1)} ft)</p>
+    ${row("A")}${row("B")}${row("S")}
+    <div class="fair">${fair}</div>
+    <h3>Shopping list</h3>
+    ${Object.entries(parts).map(([k,n])=>
+      `<div class="row"><span>${CATALOG[k].ic} ${CATALOG[k].label}</span><span>× ${n}</span></div>`).join("") ||
+      '<p class="hint">Nothing yet — add some pieces!</p>'}
+  `;
+}
+
+/* ---------- Persistence ---------- */
+const STORE = "closet-designs-v1";
+function readStore(){ try{ return JSON.parse(localStorage.getItem(STORE)) || {}; } catch{ return {}; } }
+function writeStore(d){ localStorage.setItem(STORE, JSON.stringify(d)); }
+function refreshDesignList(sel){
+  const list = $("designList");
+  const names = Object.keys(readStore()).sort();
+  list.innerHTML = '<option value="">— saved designs —</option>' +
+    names.map(n=>`<option${n===sel?" selected":""}>${n.replace(/</g,"&lt;")}</option>`).join("");
+}
+
+$("saveBtn").addEventListener("click", ()=>{
+  const name = prompt("Name this design:", $("designList").value || "Dream Closet v1");
+  if (!name) return;
+  const store = readStore();
+  store[name] = state;
+  writeStore(store);
+  refreshDesignList(name);
+  toast(`Saved “${name}”`);
+});
+$("designList").addEventListener("change", (e)=>{
+  const name = e.target.value;
+  if (!name) return;
+  const d = readStore()[name];
+  if (d){ state = d; selected = 0; render(); toast(`Loaded “${name}”`); }
+});
+$("deleteBtn").addEventListener("click", ()=>{
+  const name = $("designList").value;
+  if (!name) return toast("Pick a saved design first");
+  if (!confirm(`Delete “${name}”?`)) return;
+  const store = readStore();
+  delete store[name];
+  writeStore(store);
+  refreshDesignList("");
+  toast(`Deleted “${name}”`);
+});
+$("newBtn").addEventListener("click", ()=>{
+  if (!confirm("Start a fresh design? (Unsaved changes will be lost)")) return;
+  state = DEFAULT(); selected = 0; render();
+});
+$("printBtn").addEventListener("click", ()=>window.print());
+
+/* ---------- Header inputs ---------- */
+$("nameA").addEventListener("input", (e)=>{ state.nameA = e.target.value || "A"; renderAllOwnerText(); });
+$("nameB").addEventListener("input", (e)=>{ state.nameB = e.target.value || "B"; renderAllOwnerText(); });
+function renderAllOwnerText(){
+  document.querySelectorAll(".section").forEach((el,si)=>{
+    const btn = el.querySelector(".ownerbtn");
+    if (btn) btn.textContent = ownerName(state.sections[si].owner);
+  });
+  renderSummary();
+}
+$("cHeight").addEventListener("change", (e)=>{
+  state.height = Math.min(144, Math.max(48, parseInt(e.target.value)||96));
+  render();
+});
+$("addSection").addEventListener("click", ()=>{
+  state.sections.push({ width:24, owner:"S", modules:[] });
+  selected = state.sections.length - 1;
+  render();
+});
+
+/* ---------- Go ---------- */
+buildPalette();
+refreshDesignList("");
+render();
+</script>
+</body>
+</html>
