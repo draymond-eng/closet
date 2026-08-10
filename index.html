@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Our Closet — A Private Showroom</title>
+<title>The Washington Closet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
@@ -368,7 +368,7 @@
     content:"";position:absolute;inset:3px;border-radius:50%;border:1px solid rgba(168,137,78,.35);
   }
   .logo::after{
-    content:"C";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    content:"W";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-family:"Cormorant Garamond",Georgia,serif;font-size:25px;color:var(--brass);
   }
   .namechip{border-radius:2px;border-color:var(--line)}
@@ -467,15 +467,15 @@
   <div class="brand">
     <div class="logo" aria-hidden="true"></div>
     <div>
-      <h1>Our Closet</h1>
-      <p class="tag">A Private Showroom for Two</p>
+      <h1>The Washington Closet</h1>
+      <p class="tag">A Private Showroom for Two · Est. 2026</p>
     </div>
   </div>
   <div class="names">
     <label class="namechip"><span class="dot" style="background:var(--a)"></span>
       <input id="nameA" value="Draymond" maxlength="14" aria-label="First person's name"></label>
     <label class="namechip"><span class="dot" style="background:var(--b)"></span>
-      <input id="nameB" value="My Wife" maxlength="14" aria-label="Second person's name"></label>
+      <input id="nameB" value="Ali" maxlength="14" aria-label="Second person's name"></label>
   </div>
 </header>
 
@@ -699,7 +699,7 @@ const SCALE = 3.4; // px per inch
 // his wall, then the shared back wall, then her wall. The 6-drawer
 // dresser lives in the bedroom, so the closet skips big drawer stacks.
 const DEFAULT = () => ({
-  nameA:"Draymond", nameB:"My Wife", height:96, dresser:true, spareCloset:true,
+  nameA:"Draymond", nameB:"Ali", height:96, dresser:true, spareCloset:true,
   sections:[
     { width:36, owner:"A", modules:["hang","hang","shoe"] },
     { width:24, owner:"A", modules:["longhang","shelf","shoe"] },

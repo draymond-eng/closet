@@ -1,4 +1,4 @@
-# Our Closet 🚪👔👗
+# The Washington Closet 🚪👔👗
 
 A his-and-hers closet app for designing, organizing, and getting dressed — together.
 
