@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Our Closet Designer</title>
+<title>Our Closet</title>
 <style>
   :root{
     --bg:#f6f1e8;
@@ -35,7 +35,7 @@
     min-height:100vh;
   }
   button{font-family:inherit;cursor:pointer}
-  input,select{font-family:inherit}
+  input,select,textarea{font-family:inherit}
 
   header{
     display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
@@ -63,6 +63,22 @@
   .namechip input{
     border:none;background:transparent;font-size:14px;width:110px;outline:none;color:var(--text);
   }
+
+  /* ---------- Tabs ---------- */
+  .tabs{
+    display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+    padding:10px 26px 0 26px;
+  }
+  .tab{
+    padding:9px 18px;border:1.5px solid var(--line);border-bottom:none;
+    border-radius:12px 12px 0 0;background:var(--bg2);color:var(--muted);
+    font-size:14.5px;letter-spacing:.3px;
+  }
+  .tab.active{background:var(--panel);color:var(--wood-dark);font-weight:bold;box-shadow:0 -4px 10px rgba(80,60,30,.06)}
+  .tab.gear{margin-left:auto;border-radius:12px;border-bottom:1.5px solid var(--line);font-size:15px}
+  .tabpane{display:none}
+  .tabpane.active{display:grid}
+  #tab-wardrobe.active,#tab-outfits.active{display:block}
 
   main{display:grid;grid-template-columns:250px 1fr 270px;gap:18px;padding:18px 26px;align-items:start}
   @media (max-width:1050px){ main{grid-template-columns:1fr} }
@@ -207,6 +223,7 @@
   .btn:hover{background:var(--wood-dark)}
   .btn.ghost{background:transparent;color:var(--wood-dark)}
   .btn.ghost:hover{background:var(--bg2)}
+  .btn:disabled{opacity:.5;cursor:wait}
   select.designs{
     padding:8px 10px;border-radius:10px;border:1.5px solid var(--line);
     background:#fffef9;font-size:13.5px;color:var(--text);max-width:100%;
@@ -215,11 +232,84 @@
     position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);
     background:var(--wood-dark);color:#fffdf8;padding:10px 20px;border-radius:999px;
     font-size:14px;box-shadow:var(--shadow);transition:transform .25s;z-index:50;
+    max-width:86vw;text-align:center;
   }
   .toast.show{transform:translateX(-50%) translateY(0)}
 
+  /* ---------- Wardrobe ---------- */
+  .wgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:18px 26px;align-items:start}
+  @media (max-width:900px){ .wgrid{grid-template-columns:1fr} }
+  .wgrid .span2{grid-column:1 / -1}
+  .upload{display:inline-flex;align-items:center;gap:8px}
+  .photos{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+  .photocard{
+    position:relative;width:150px;border:1.5px solid var(--line);border-radius:12px;
+    overflow:hidden;background:#fffef9;
+  }
+  .photocard img{width:100%;height:110px;object-fit:cover;display:block}
+  .photocard .pc-actions{display:flex;gap:5px;padding:7px}
+  .photocard .pc-actions button{
+    flex:1;font-size:11.5px;padding:5px 4px;border-radius:8px;border:1.5px solid var(--line);
+    background:#fffef9;color:var(--wood-dark);
+  }
+  .photocard .pc-actions button:hover{border-color:var(--wood)}
+  .photocard .badge{
+    position:absolute;top:6px;left:6px;font-size:10.5px;background:var(--s);color:#fff;
+    padding:2px 8px;border-radius:999px;
+  }
+  .photocard.busy::after{
+    content:"Claude is looking… 👀";position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:center;background:rgba(255,253,248,.85);font-size:12px;color:var(--wood-dark);
+    text-align:center;padding:6px;
+  }
+  .itemlist{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+  .itemcat b{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--wood-dark)}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;padding:5px 10px;font-size:12.5px;
+    border:1.5px solid var(--line);border-radius:999px;background:#fffef9;
+  }
+  .chip .dot{width:9px;height:9px;border-radius:50%;flex:none;cursor:pointer}
+  .chip .x{border:none;background:none;padding:0;color:var(--muted);font-size:12px;line-height:1}
+  .chip .x:hover{color:var(--bad)}
+  .addrow{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px;align-items:center}
+  .addrow input,.addrow select{
+    padding:7px 9px;border:1.5px solid var(--line);border-radius:9px;background:#fffef9;
+    font-size:13px;color:var(--text);
+  }
+  .addrow input{flex:1;min-width:120px}
+  .aiout{
+    margin-top:14px;padding:14px 16px;border-radius:12px;background:var(--bg2);
+    border:1px solid var(--line);font-size:14px;line-height:1.6;white-space:pre-wrap;
+  }
+  .aiout:empty{display:none}
+  .keynote{font-size:12px;color:var(--muted);font-style:italic;margin-top:10px}
+
+  /* ---------- Outfits ---------- */
+  .ogrid{display:grid;grid-template-columns:320px 1fr;gap:18px;padding:18px 26px;align-items:start}
+  @media (max-width:900px){ .ogrid{grid-template-columns:1fr} }
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+  .field input,.field select{
+    width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;
+    background:#fffef9;font-size:13.5px;color:var(--text);
+  }
+
+  /* ---------- Settings dialog ---------- */
+  dialog{
+    border:1.5px solid var(--line);border-radius:var(--radius);background:var(--panel);
+    color:var(--text);box-shadow:var(--shadow);padding:22px;max-width:440px;width:92vw;
+  }
+  dialog::backdrop{background:rgba(58,47,36,.4)}
+  dialog h2{margin:0 0 6px;font-size:16px;color:var(--wood-dark)}
+  dialog p{font-size:13px;color:var(--muted);line-height:1.5}
+  dialog input{
+    width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;
+    background:#fffef9;font-size:13.5px;color:var(--text);margin:8px 0 14px;
+  }
+
   @media print{
-    header .names, .palette-card, .actions-card, .sec-foot button, .mtools, .dims{display:none !important}
+    header .names, .palette-card, .actions-card, .sec-foot button, .mtools, .dims, .tabs{display:none !important}
     body{background:#fff}
     main{display:block;padding:10px}
     .card{box-shadow:none;border:none;padding:6px;page-break-inside:avoid}
@@ -232,8 +322,8 @@
   <div class="brand">
     <div class="logo" aria-hidden="true"></div>
     <div>
-      <h1>Our Closet Designer</h1>
-      <p class="tag">design it together, before the drill comes out</p>
+      <h1>Our Closet</h1>
+      <p class="tag">design it, organize it, get dressed — together</p>
     </div>
   </div>
   <div class="names">
@@ -244,7 +334,15 @@
   </div>
 </header>
 
-<main>
+<nav class="tabs">
+  <button class="tab active" data-tab="design">🛠 Design</button>
+  <button class="tab" data-tab="wardrobe">📷 Wardrobe</button>
+  <button class="tab" data-tab="outfits">✨ Outfits</button>
+  <button class="tab gear" id="settingsBtn" title="Claude API key">⚙︎ Claude</button>
+</nav>
+
+<!-- ================= DESIGN TAB ================= -->
+<main class="tabpane active" id="tab-design">
   <!-- Palette -->
   <div class="card palette-card">
     <h2>Pieces</h2>
@@ -288,12 +386,111 @@
   </div>
 </main>
 
+<!-- ================= WARDROBE TAB ================= -->
+<div class="tabpane" id="tab-wardrobe">
+  <div class="wgrid">
+    <div class="card">
+      <h2>Closet Photos</h2>
+      <p class="hint">Snap pictures of your closet, shelves, or laid-out clothes. Then let Claude catalog what it sees.</p>
+      <label class="btn upload">📷 Add photos
+        <input id="photoInput" type="file" accept="image/*" capture="environment" multiple hidden>
+      </label>
+      <div class="photos" id="photoStrip"></div>
+      <p class="keynote">Photos never leave this browser except when you press “Analyze,” which sends that photo to Claude.</p>
+    </div>
+
+    <div class="card">
+      <h2>Wardrobe Items</h2>
+      <p class="hint">Everything Claude found, plus anything you add by hand. Click an item's dot to change whose it is.</p>
+      <div class="itemlist" id="itemList"><p class="hint">Nothing cataloged yet.</p></div>
+      <div class="addrow">
+        <input id="newItemName" placeholder="Add item by hand… e.g. navy blazer" maxlength="60">
+        <select id="newItemCat"></select>
+        <select id="newItemOwner"></select>
+        <button class="btn ghost" id="addItemBtn">Add</button>
+      </div>
+    </div>
+
+    <div class="card span2">
+      <h2>Organize It</h2>
+      <p class="hint">Claude combines your cataloged wardrobe with your closet design from the Design tab and proposes where everything should live.</p>
+      <button class="btn" id="organizeBtn">🧠 Make us an organizing plan</button>
+      <div class="aiout" id="organizeOut"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= OUTFITS TAB ================= -->
+<div class="tabpane" id="tab-outfits">
+  <div class="ogrid">
+    <div class="card">
+      <h2>Pick An Outfit</h2>
+      <p class="hint">Claude picks from your cataloged wardrobe. The more items in the Wardrobe tab, the better the picks.</p>
+      <div class="field"><label>Who's getting dressed?</label>
+        <select id="outfitWho"></select></div>
+      <div class="field"><label>Occasion</label>
+        <input id="outfitOccasion" placeholder="e.g. date night, church, brunch with friends"></div>
+      <div class="field"><label>Weather / season</label>
+        <input id="outfitWeather" placeholder="e.g. 85° and humid, chilly fall evening"></div>
+      <div class="field"><label>Vibe (optional)</label>
+        <input id="outfitVibe" placeholder="e.g. dressy but comfortable"></div>
+      <button class="btn" id="outfitBtn">✨ Dress us</button>
+    </div>
+    <div class="card">
+      <h2>The Looks</h2>
+      <div class="aiout" id="outfitOut"></div>
+      <p class="hint" id="outfitEmpty">Fill in the occasion and hit “Dress us.”</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SETTINGS ================= -->
+<dialog id="settingsDlg">
+  <h2>Claude API key</h2>
+  <p>The Wardrobe and Outfits features call Claude directly from your browser. Paste an Anthropic API key
+     (from <b>platform.claude.com</b>) — it's stored only in this browser's localStorage, never uploaded anywhere else.</p>
+  <p id="settingsMsg" style="color:var(--bad)"></p>
+  <input id="apiKeyInput" type="password" placeholder="sk-ant-…" autocomplete="off">
+  <div class="actions">
+    <button class="btn" id="saveKeyBtn">Save</button>
+    <button class="btn ghost" id="closeDlgBtn">Close</button>
+  </div>
+</dialog>
+
 <div class="toast" id="toast"></div>
 
 <script>
 "use strict";
 
-/* ---------- Catalog ---------- */
+/* ============================================================
+   SHARED STATE + HELPERS
+   ============================================================ */
+const $ = (id)=>document.getElementById(id);
+const toastEl = $("toast");
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>toastEl.classList.remove("show"), 3200);
+}
+function ownerColor(o){ return o==="A" ? "var(--a)" : o==="B" ? "var(--b)" : "var(--s)"; }
+function ownerSoft(o){ return o==="A" ? "var(--a-soft)" : o==="B" ? "var(--b-soft)" : "var(--s-soft)"; }
+function ownerName(o){ return o==="A" ? state.nameA : o==="B" ? state.nameB : "Shared"; }
+const esc = (s)=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll(".tab[data-tab]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab[data-tab]").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tabpane").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    $("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+/* ============================================================
+   DESIGN TAB — closet layout planner
+   ============================================================ */
 const CATALOG = {
   longhang:{ label:"Long Hang",   ic:"🧥", h:66, rod:true,  desc:'66" — dresses & coats' },
   hang:    { label:"Hang Zone",   ic:"👔", h:42, rod:true,  desc:'42" — shirts & pants (stack two!)' },
@@ -308,7 +505,6 @@ const CATALOG = {
 const OWNERS = ["A","B","S"];
 const SCALE = 3.4; // px per inch
 
-/* ---------- State ---------- */
 const DEFAULT = () => ({
   nameA:"Draymond", nameB:"My Wife", height:96,
   sections:[
@@ -320,21 +516,8 @@ const DEFAULT = () => ({
 let state = DEFAULT();
 let selected = 0;
 
-const $ = (id)=>document.getElementById(id);
-const closetEl=$("closet"), summaryEl=$("summary"), toastEl=$("toast");
+const closetEl=$("closet"), summaryEl=$("summary");
 
-function ownerColor(o){ return o==="A" ? "var(--a)" : o==="B" ? "var(--b)" : "var(--s)"; }
-function ownerSoft(o){ return o==="A" ? "var(--a-soft)" : o==="B" ? "var(--b-soft)" : "var(--s-soft)"; }
-function ownerName(o){ return o==="A" ? state.nameA : o==="B" ? state.nameB : "Shared"; }
-
-function toast(msg){
-  toastEl.textContent = msg;
-  toastEl.classList.add("show");
-  clearTimeout(toast._t);
-  toast._t = setTimeout(()=>toastEl.classList.remove("show"), 2200);
-}
-
-/* ---------- Palette ---------- */
 function buildPalette(){
   const pal = $("palette");
   pal.innerHTML = "";
@@ -349,7 +532,6 @@ function buildPalette(){
   }
 }
 
-/* ---------- Mutations ---------- */
 function addModule(si, key){
   const sec = state.sections[si];
   if (!sec) return toast("Select a section first");
@@ -371,7 +553,6 @@ function cycleOwner(si){
   render();
 }
 
-/* ---------- Render ---------- */
 function render(){
   $("nameA").value = state.nameA;
   $("nameB").value = state.nameB;
@@ -394,7 +575,6 @@ function render(){
       if (CATALOG[key]){ selected = si; addModule(si, key); }
     });
 
-    // owner tab
     const head = document.createElement("div");
     head.className = "sec-head";
     const ob = document.createElement("button");
@@ -406,7 +586,6 @@ function render(){
     head.appendChild(ob);
     el.appendChild(head);
 
-    // overflow flag
     const used = sec.modules.reduce((t,k)=>t+CATALOG[k].h, 0);
     if (used > state.height){
       const f = document.createElement("div");
@@ -415,7 +594,6 @@ function render(){
       el.appendChild(f);
     }
 
-    // modules
     sec.modules.forEach((key, mi)=>{
       const m = CATALOG[key];
       const mod = document.createElement("div");
@@ -459,7 +637,6 @@ function render(){
       el.appendChild(mod);
     });
 
-    // footer: width + delete
     const foot = document.createElement("div");
     foot.className = "sec-foot";
     const w = document.createElement("input");
@@ -488,9 +665,9 @@ function render(){
   });
 
   renderSummary();
+  refreshOwnerSelects();
 }
 
-/* ---------- Summary ---------- */
 function renderSummary(){
   const tally = { A:{hang:0,shelf:0,drawer:0,shoe:0,width:0}, B:{hang:0,shelf:0,drawer:0,shoe:0,width:0}, S:{hang:0,shelf:0,drawer:0,shoe:0,width:0} };
   const parts = {};
@@ -510,7 +687,7 @@ function renderSummary(){
   const row = (o)=>{
     const t = tally[o];
     return `<div class="row">
-      <span class="who"><span class="dot" style="background:${ownerColor(o)}"></span>${ownerName(o)}</span>
+      <span class="who"><span class="dot" style="background:${ownerColor(o)}"></span>${esc(ownerName(o))}</span>
       <span>${t.width}" wide · ${t.hang}" of rod · ${t.drawer} drawers${t.shoe ? ` · ~${t.shoe} pairs` : ""}</span>
     </div>`;
   };
@@ -522,8 +699,8 @@ function renderSummary(){
   else {
     const shareA = Math.round(100 * a.hang / totalHang);
     if (Math.abs(shareA - 50) <= 10) fair = "Hanging space is basically even. A marriage built to last. 💛";
-    else if (shareA > 50) fair = `${state.nameA} has ${shareA}% of the personal hanging space. ${state.nameB} may want to renegotiate…`;
-    else fair = `${state.nameB} has ${100-shareA}% of the personal hanging space. ${state.nameA} may want to renegotiate…`;
+    else if (shareA > 50) fair = `${esc(state.nameA)} has ${shareA}% of the personal hanging space. ${esc(state.nameB)} may want to renegotiate…`;
+    else fair = `${esc(state.nameB)} has ${100-shareA}% of the personal hanging space. ${esc(state.nameA)} may want to renegotiate…`;
   }
 
   const totalW = state.sections.reduce((t,s)=>t+s.width, 0);
@@ -539,7 +716,7 @@ function renderSummary(){
   `;
 }
 
-/* ---------- Persistence ---------- */
+/* ---------- Design persistence ---------- */
 const STORE = "closet-designs-v1";
 function readStore(){ try{ return JSON.parse(localStorage.getItem(STORE)) || {}; } catch{ return {}; } }
 function writeStore(d){ localStorage.setItem(STORE, JSON.stringify(d)); }
@@ -547,7 +724,7 @@ function refreshDesignList(sel){
   const list = $("designList");
   const names = Object.keys(readStore()).sort();
   list.innerHTML = '<option value="">— saved designs —</option>' +
-    names.map(n=>`<option${n===sel?" selected":""}>${n.replace(/</g,"&lt;")}</option>`).join("");
+    names.map(n=>`<option${n===sel?" selected":""}>${esc(n)}</option>`).join("");
 }
 
 $("saveBtn").addEventListener("click", ()=>{
@@ -581,15 +758,15 @@ $("newBtn").addEventListener("click", ()=>{
 });
 $("printBtn").addEventListener("click", ()=>window.print());
 
-/* ---------- Header inputs ---------- */
 $("nameA").addEventListener("input", (e)=>{ state.nameA = e.target.value || "A"; renderAllOwnerText(); });
 $("nameB").addEventListener("input", (e)=>{ state.nameB = e.target.value || "B"; renderAllOwnerText(); });
 function renderAllOwnerText(){
-  document.querySelectorAll(".section").forEach((el,si)=>{
+  document.querySelectorAll("#closet .section").forEach((el,si)=>{
     const btn = el.querySelector(".ownerbtn");
     if (btn) btn.textContent = ownerName(state.sections[si].owner);
   });
   renderSummary();
+  refreshOwnerSelects();
 }
 $("cHeight").addEventListener("change", (e)=>{
   state.height = Math.min(144, Math.max(48, parseInt(e.target.value)||96));
@@ -601,10 +778,417 @@ $("addSection").addEventListener("click", ()=>{
   render();
 });
 
-/* ---------- Go ---------- */
+/* ============================================================
+   WARDROBE TAB — photos + item catalog (IndexedDB)
+   ============================================================ */
+const ITEM_CATS = ["tops","bottoms","dresses","outerwear","shoes","accessories","other"];
+const CAT_ICONS = { tops:"👕", bottoms:"👖", dresses:"👗", outerwear:"🧥", shoes:"👟", accessories:"🧢", other:"🧺" };
+
+let dbPromise = null;
+function db(){
+  if (!dbPromise){
+    dbPromise = new Promise((res, rej)=>{
+      const r = indexedDB.open("closet-wardrobe", 1);
+      r.onupgradeneeded = ()=>{
+        r.result.createObjectStore("photos", { keyPath:"id" });
+        r.result.createObjectStore("items", { keyPath:"id" });
+      };
+      r.onsuccess = ()=>res(r.result);
+      r.onerror = ()=>rej(r.error);
+    });
+  }
+  return dbPromise;
+}
+async function dbAll(store){
+  const d = await db();
+  return new Promise((res, rej)=>{
+    const rq = d.transaction(store).objectStore(store).getAll();
+    rq.onsuccess = ()=>res(rq.result);
+    rq.onerror = ()=>rej(rq.error);
+  });
+}
+async function dbPut(store, val){
+  const d = await db();
+  return new Promise((res, rej)=>{
+    const tx = d.transaction(store, "readwrite");
+    tx.objectStore(store).put(val);
+    tx.oncomplete = res;
+    tx.onerror = ()=>rej(tx.error);
+  });
+}
+async function dbDel(store, id){
+  const d = await db();
+  return new Promise((res, rej)=>{
+    const tx = d.transaction(store, "readwrite");
+    tx.objectStore(store).delete(id);
+    tx.oncomplete = res;
+    tx.onerror = ()=>rej(tx.error);
+  });
+}
+const uid = ()=>Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ---------- Photos ---------- */
+$("photoInput").addEventListener("change", async (e)=>{
+  for (const file of e.target.files){
+    await dbPut("photos", { id: uid(), blob: file, analyzed: false, createdAt: Date.now() });
+  }
+  e.target.value = "";
+  renderPhotos();
+  toast("Photo added — hit ✨ Analyze when you're ready");
+});
+
+async function renderPhotos(){
+  const strip = $("photoStrip");
+  const photos = (await dbAll("photos")).sort((a,b)=>a.createdAt-b.createdAt);
+  strip.innerHTML = "";
+  photos.forEach(p=>{
+    const card = document.createElement("div");
+    card.className = "photocard";
+    card.dataset.id = p.id;
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(p.blob);
+    img.onload = ()=>URL.revokeObjectURL(img.src);
+    card.appendChild(img);
+    if (p.analyzed) card.insertAdjacentHTML("beforeend", `<span class="badge">✓ cataloged</span>`);
+    const acts = document.createElement("div");
+    acts.className = "pc-actions";
+    const an = document.createElement("button");
+    an.textContent = p.analyzed ? "↻ Re-analyze" : "✨ Analyze";
+    an.addEventListener("click", ()=>analyzePhoto(p, card));
+    const del = document.createElement("button");
+    del.textContent = "✕";
+    del.style.flex = "0 0 34px";
+    del.addEventListener("click", async ()=>{
+      if (!confirm("Delete this photo? (Items already cataloged from it stay.)")) return;
+      await dbDel("photos", p.id);
+      renderPhotos();
+    });
+    acts.append(an, del);
+    card.appendChild(acts);
+    strip.appendChild(card);
+  });
+}
+
+/* ---------- Items ---------- */
+async function renderItems(){
+  const items = (await dbAll("items")).sort((a,b)=>a.createdAt-b.createdAt);
+  const list = $("itemList");
+  if (!items.length){
+    list.innerHTML = '<p class="hint">Nothing cataloged yet.</p>';
+    return;
+  }
+  list.innerHTML = "";
+  for (const cat of ITEM_CATS){
+    const inCat = items.filter(i=>i.category===cat);
+    if (!inCat.length) continue;
+    const box = document.createElement("div");
+    box.className = "itemcat";
+    box.innerHTML = `<b>${CAT_ICONS[cat]} ${cat} · ${inCat.length}</b>`;
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    inCat.forEach(item=>{
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = ownerColor(item.owner);
+      dot.title = `${ownerName(item.owner)} — click to change`;
+      dot.addEventListener("click", async ()=>{
+        item.owner = OWNERS[(OWNERS.indexOf(item.owner)+1) % OWNERS.length];
+        await dbPut("items", item);
+        renderItems();
+      });
+      const x = document.createElement("button");
+      x.className = "x";
+      x.textContent = "✕";
+      x.addEventListener("click", async ()=>{ await dbDel("items", item.id); renderItems(); });
+      chip.append(dot, document.createTextNode(item.name + " "), x);
+      chips.appendChild(chip);
+    });
+    box.appendChild(chips);
+    list.appendChild(box);
+  }
+}
+
+function refreshOwnerSelects(){
+  const opts = `<option value="A">${esc(state.nameA)}</option><option value="B">${esc(state.nameB)}</option><option value="S">Shared</option>`;
+  const keep = (sel)=>{ const v = sel.value; sel.innerHTML = opts; if (v) sel.value = v; };
+  keep($("newItemOwner"));
+  const who = $("outfitWho");
+  const wv = who.value;
+  who.innerHTML = `<option value="A">${esc(state.nameA)}</option><option value="B">${esc(state.nameB)}</option><option value="both">Both of us</option>`;
+  if (wv) who.value = wv;
+}
+$("newItemCat").innerHTML = ITEM_CATS.map(c=>`<option>${c}</option>`).join("");
+
+$("addItemBtn").addEventListener("click", async ()=>{
+  const name = $("newItemName").value.trim();
+  if (!name) return toast("Give the item a name first");
+  await dbPut("items", {
+    id: uid(), name, category: $("newItemCat").value,
+    owner: $("newItemOwner").value, color: "", createdAt: Date.now(),
+  });
+  $("newItemName").value = "";
+  renderItems();
+});
+
+/* ============================================================
+   CLAUDE — browser-direct via the official SDK
+   ============================================================ */
+const KEY_STORE = "closet-claude-key";
+let clientPromise = null;
+
+function openSettings(msg){
+  $("settingsMsg").textContent = msg || "";
+  $("apiKeyInput").value = localStorage.getItem(KEY_STORE) || "";
+  $("settingsDlg").showModal();
+}
+$("settingsBtn").addEventListener("click", ()=>openSettings());
+$("closeDlgBtn").addEventListener("click", ()=>$("settingsDlg").close());
+$("saveKeyBtn").addEventListener("click", ()=>{
+  const key = $("apiKeyInput").value.trim();
+  if (!key) return openSettings("That key looks empty.");
+  localStorage.setItem(KEY_STORE, key);
+  clientPromise = null; // rebuild client with the new key
+  $("settingsDlg").close();
+  toast("Key saved (in this browser only)");
+});
+
+async function getClient(){
+  const key = localStorage.getItem(KEY_STORE);
+  if (!key){
+    openSettings("Add your Claude API key to use this feature.");
+    return null;
+  }
+  if (!clientPromise){
+    clientPromise = import("https://esm.sh/@anthropic-ai/sdk")
+      .then(m => new m.default({ apiKey: key, dangerouslyAllowBrowser: true }));
+  }
+  return clientPromise;
+}
+
+// Claude Opus 5 with server-side refusal fallbacks enabled by default; if the
+// beta surface rejects the request, retry once on the plain endpoint.
+async function callClaude(params){
+  const client = await getClient();
+  if (!client) return null;
+  try{
+    return await client.beta.messages.create({
+      ...params,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+    });
+  }catch(err){
+    if (err && err.status === 400){
+      return client.messages.create(params);
+    }
+    throw err;
+  }
+}
+
+function responseText(resp){
+  if (!resp) return null;
+  if (resp.stop_reason === "refusal"){
+    toast("Claude declined that one — try a different photo or request.");
+    return null;
+  }
+  const block = resp.content.find(b=>b.type === "text");
+  return block ? block.text : null;
+}
+
+function friendlyError(err){
+  const status = err && err.status;
+  if (status === 401) { openSettings("That API key was rejected — double-check it."); return; }
+  if (status === 429) { toast("Rate limited — give it a minute and try again."); return; }
+  toast("Claude call failed: " + (err && err.message ? err.message.slice(0,120) : "unknown error"));
+}
+
+/* ---------- Photo analysis (vision + structured output) ---------- */
+async function blobToScaledBase64(blob, maxEdge = 2000){
+  const bmp = await createImageBitmap(blob);
+  const scale = Math.min(1, maxEdge / Math.max(bmp.width, bmp.height));
+  const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w; canvas.height = h;
+  canvas.getContext("2d").drawImage(bmp, 0, 0, w, h);
+  bmp.close();
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+  return dataUrl.split(",")[1];
+}
+
+const ANALYSIS_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["items", "observations"],
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "category", "color", "owner"],
+        properties: {
+          name: { type: "string" },
+          category: { type: "string", enum: ITEM_CATS },
+          color: { type: "string" },
+          owner: { type: "string", enum: ["A", "B", "unknown"] },
+        },
+      },
+    },
+    observations: { type: "string" },
+  },
+};
+
+async function analyzePhoto(photo, card){
+  try{
+    card.classList.add("busy");
+    const imageData = await blobToScaledBase64(photo.blob);
+    const resp = await callClaude({
+      model: "claude-opus-5",
+      max_tokens: 8000,
+      output_config: { format: { type: "json_schema", schema: ANALYSIS_SCHEMA } },
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageData } },
+          { type: "text", text:
+`This is a photo of a shared closet belonging to a married couple: "${state.nameA}" (owner code A) and "${state.nameB}" (owner code B).
+List every distinct clothing item, pair of shoes, or accessory you can identify. Give each a short, specific name (e.g. "olive utility jacket", "black ankle boots"), its dominant color, and a category. If the styling clearly suggests whose item it is, set owner to A or B; otherwise use "unknown". In "observations", add one or two friendly sentences about the closet's current organization.` },
+        ],
+      }],
+    });
+    const text = responseText(resp);
+    if (!text) return;
+    const data = JSON.parse(text);
+    let added = 0;
+    for (const it of data.items){
+      await dbPut("items", {
+        id: uid(), name: it.name, category: it.category, color: it.color,
+        owner: it.owner === "unknown" ? "S" : it.owner,
+        photoId: photo.id, createdAt: Date.now() + added,
+      });
+      added++;
+    }
+    photo.analyzed = true;
+    await dbPut("photos", photo);
+    renderPhotos();
+    renderItems();
+    toast(`Cataloged ${added} item${added===1?"":"s"} — ${data.observations}`);
+  }catch(err){
+    if (err instanceof SyntaxError) toast("Couldn't parse Claude's answer — try again.");
+    else friendlyError(err);
+  }finally{
+    card.classList.remove("busy");
+  }
+}
+
+/* ---------- Organizing plan ---------- */
+function describeClosetDesign(){
+  return state.sections.map((sec, i)=>{
+    const mods = sec.modules.map(k=>`${CATALOG[k].label} (${CATALOG[k].h}")`).join(", ") || "empty";
+    return `Section ${i+1}: ${sec.width}" wide, assigned to ${ownerName(sec.owner)} — contains: ${mods}`;
+  }).join("\n");
+}
+async function describeWardrobe(){
+  const items = await dbAll("items");
+  if (!items.length) return null;
+  return items.map(i=>`- ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}]`).join("\n");
+}
+
+$("organizeBtn").addEventListener("click", async ()=>{
+  const wardrobe = await describeWardrobe();
+  if (!wardrobe) return toast("Catalog some items first (analyze a photo or add by hand)");
+  const btn = $("organizeBtn"), out = $("organizeOut");
+  btn.disabled = true;
+  out.textContent = "Claude is thinking about your closet…";
+  try{
+    const resp = await callClaude({
+      model: "claude-opus-5",
+      max_tokens: 6000,
+      messages: [{
+        role: "user",
+        content:
+`You're helping a married couple, ${state.nameA} and ${state.nameB}, organize their shared closet. Be warm and practical.
+
+Their closet design (${state.height}" tall, sections left to right):
+${describeClosetDesign()}
+
+Their cataloged wardrobe:
+${wardrobe}
+
+Write an organizing plan in plain text (no markdown tables or headers with #):
+1. Go section by section: what should live there and why, matching item categories to the hardware (hang zones for hanging clothes, drawers for folded, shoe shelves for shoes, etc.) and respecting whose section is whose.
+2. Note anything that doesn't have a good home and what to do about it.
+3. End with two or three quick wins they could do this weekend.
+Keep it under 400 words and make it feel like advice from a friend who's great at this.` }],
+    });
+    const text = responseText(resp);
+    out.textContent = text || "";
+  }catch(err){
+    out.textContent = "";
+    friendlyError(err);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* ---------- Outfit picker ---------- */
+$("outfitBtn").addEventListener("click", async ()=>{
+  const occasion = $("outfitOccasion").value.trim();
+  if (!occasion) return toast("Tell me the occasion first");
+  const items = await dbAll("items");
+  if (!items.length) return toast("Catalog some items in the Wardrobe tab first");
+
+  const who = $("outfitWho").value;
+  const people = who === "both" ? ["A","B"] : [who];
+  const relevant = items.filter(i => i.owner === "S" || people.includes(i.owner));
+  if (!relevant.length) return toast("No cataloged items for that person yet");
+
+  const btn = $("outfitBtn"), out = $("outfitOut");
+  btn.disabled = true;
+  $("outfitEmpty").style.display = "none";
+  out.textContent = "Claude is raiding the closet…";
+  const wardrobeText = relevant.map(i=>`- ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}]`).join("\n");
+  const whoText = who === "both" ? `both ${state.nameA} and ${state.nameB} (coordinate their looks!)` : ownerName(who);
+
+  try{
+    const resp = await callClaude({
+      model: "claude-opus-5",
+      max_tokens: 6000,
+      messages: [{
+        role: "user",
+        content:
+`You're a personal stylist for a married couple, ${state.nameA} and ${state.nameB}. Pick outfits ONLY from the wardrobe list below — never invent items they don't own.
+
+Dressing: ${whoText}
+Occasion: ${occasion}
+Weather: ${$("outfitWeather").value.trim() || "not specified"}
+Vibe: ${$("outfitVibe").value.trim() || "their call"}
+
+Their available wardrobe:
+${wardrobeText}
+
+Give 2–3 outfit options in plain text (no markdown symbols). For each: a fun name for the look, the exact items from the list, and one sentence on why it works. If the wardrobe is missing something important for this occasion, say so kindly at the end. Keep it under 300 words.` }],
+    });
+    const text = responseText(resp);
+    out.textContent = text || "";
+  }catch(err){
+    out.textContent = "";
+    $("outfitEmpty").style.display = "";
+    friendlyError(err);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* ============================================================
+   GO
+   ============================================================ */
 buildPalette();
 refreshDesignList("");
 render();
+renderPhotos();
+renderItems();
 </script>
 </body>
 </html>
