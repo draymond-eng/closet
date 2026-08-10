@@ -294,6 +294,13 @@
     width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;
     background:#fffef9;font-size:13.5px;color:var(--text);
   }
+  .sketchbox{margin-top:12px}
+  .sketchbox:empty{display:none}
+  .sketchbox img{
+    width:100%;border:1.5px solid var(--line);border-radius:12px;background:#fffef9;
+    box-shadow:var(--shadow);display:block;
+  }
+  .sketchbox .hint{margin-top:6px}
 
   /* ---------- Settings dialog ---------- */
   dialog{
@@ -435,12 +442,40 @@
         <input id="outfitWeather" placeholder="e.g. 85° and humid, chilly fall evening"></div>
       <div class="field"><label>Vibe (optional)</label>
         <input id="outfitVibe" placeholder="e.g. dressy but comfortable"></div>
-      <button class="btn" id="outfitBtn">✨ Dress us</button>
+      <div class="field"><label style="display:flex;align-items:center;gap:7px;cursor:pointer">
+        <input id="spouseMode" type="checkbox" style="width:auto"> 🎁 Let my spouse pick (Claude channels them)</label></div>
+      <div class="actions">
+        <button class="btn" id="outfitBtn">✨ Dress us</button>
+        <button class="btn ghost" id="todayBtn" title="Uses your location for live weather">🌤 Dress me for today</button>
+      </div>
     </div>
     <div class="card">
       <h2>The Looks</h2>
       <div class="aiout" id="outfitOut"></div>
       <p class="hint" id="outfitEmpty">Fill in the occasion and hit “Dress us.”</p>
+      <div class="actions" id="sketchActions" style="display:none;margin-top:12px">
+        <button class="btn" id="sketchBtn">🎨 Sketch it on us</button>
+      </div>
+      <div class="sketchbox" id="sketchBox"></div>
+    </div>
+
+    <div class="card">
+      <h2>Packing List</h2>
+      <p class="hint">Going somewhere? Claude packs from clothes you actually own.</p>
+      <div class="field"><label>Where to?</label>
+        <input id="packDest" placeholder="e.g. Miami, a cabin in the mountains"></div>
+      <div class="field"><label>How many nights?</label>
+        <input id="packNights" type="number" min="1" max="30" value="3"></div>
+      <div class="field"><label>Trip notes (optional)</label>
+        <input id="packNotes" placeholder="e.g. one nice dinner, lots of walking"></div>
+      <div class="field"><label>Packing for</label>
+        <select id="packWho"></select></div>
+      <button class="btn" id="packBtn">🧳 Pack for us</button>
+    </div>
+    <div class="card">
+      <h2>The Suitcase</h2>
+      <div class="aiout" id="packOut"></div>
+      <p class="hint" id="packEmpty">Tell me where you're headed.</p>
     </div>
   </div>
 </div>
@@ -929,10 +964,15 @@ function refreshOwnerSelects(){
   const opts = `<option value="A">${esc(state.nameA)}</option><option value="B">${esc(state.nameB)}</option><option value="S">Shared</option>`;
   const keep = (sel)=>{ const v = sel.value; sel.innerHTML = opts; if (v) sel.value = v; };
   keep($("newItemOwner"));
+  const peopleOpts = `<option value="A">${esc(state.nameA)}</option><option value="B">${esc(state.nameB)}</option><option value="both">Both of us</option>`;
   const who = $("outfitWho");
   const wv = who.value;
-  who.innerHTML = `<option value="A">${esc(state.nameA)}</option><option value="B">${esc(state.nameB)}</option><option value="both">Both of us</option>`;
+  who.innerHTML = peopleOpts;
   if (wv) who.value = wv;
+  const pw = $("packWho");
+  const pv = pw.value || "both";
+  pw.innerHTML = peopleOpts;
+  pw.value = pv;
 }
 $("newItemCat").innerHTML = ITEM_CATS.map(c=>`<option>${c}</option>`).join("");
 
@@ -1153,7 +1193,9 @@ Keep it under 400 words and make it feel like advice from a friend who's great a
 });
 
 /* ---------- Outfit picker ---------- */
-$("outfitBtn").addEventListener("click", async ()=>{
+let lastLooks = null; // remembered for the sketch button
+
+async function generateOutfits(){
   const occasion = $("outfitOccasion").value.trim();
   if (!occasion) return toast("Tell me the occasion first");
   const items = await dbAll("items");
@@ -1167,9 +1209,18 @@ $("outfitBtn").addEventListener("click", async ()=>{
   const btn = $("outfitBtn"), out = $("outfitOut");
   btn.disabled = true;
   $("outfitEmpty").style.display = "none";
+  $("sketchActions").style.display = "none";
+  $("sketchBox").innerHTML = "";
+  lastLooks = null;
   out.textContent = "Claude is raiding the closet…";
   const wardrobeText = relevant.map(i=>`- ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}]`).join("\n");
   const whoText = who === "both" ? `both ${state.nameA} and ${state.nameB} (coordinate their looks!)` : ownerName(who);
+
+  const spouseMode = $("spouseMode").checked && who !== "both";
+  const spouseName = who === "A" ? state.nameB : state.nameA;
+  const spouseLine = spouseMode
+    ? `\nSpecial mode: write this as if ${spouseName} personally chose the outfit for ${ownerName(who)}. Use ${spouseName}'s warm, teasing voice, and end with a short loving note from ${spouseName} about why they picked it.`
+    : "";
 
   try{
     const resp = await callClaude({
@@ -1183,7 +1234,7 @@ $("outfitBtn").addEventListener("click", async ()=>{
 Dressing: ${whoText}
 Occasion: ${occasion}
 Weather: ${$("outfitWeather").value.trim() || "not specified"}
-Vibe: ${$("outfitVibe").value.trim() || "their call"}
+Vibe: ${$("outfitVibe").value.trim() || "their call"}${spouseLine}
 
 Their available wardrobe:
 ${wardrobeText}
@@ -1192,9 +1243,148 @@ Give 2–3 outfit options in plain text (no markdown symbols). For each: a fun n
     });
     const text = responseText(resp);
     out.textContent = text || "";
+    if (text){
+      lastLooks = { whoText, text };
+      $("sketchActions").style.display = "";
+    }
   }catch(err){
     out.textContent = "";
     $("outfitEmpty").style.display = "";
+    friendlyError(err);
+  }finally{
+    btn.disabled = false;
+  }
+}
+$("outfitBtn").addEventListener("click", generateOutfits);
+
+/* ---------- One-tap "dress me for today" (live local weather) ---------- */
+const WMO = {0:"clear skies",1:"mostly clear",2:"partly cloudy",3:"overcast",45:"foggy",48:"foggy",
+  51:"drizzle",53:"drizzle",55:"drizzle",61:"light rain",63:"rain",65:"heavy rain",
+  71:"snow",73:"snow",75:"heavy snow",80:"rain showers",81:"rain showers",82:"heavy showers",
+  95:"thunderstorms",96:"thunderstorms",99:"thunderstorms"};
+
+async function todaysWeather(){
+  const pos = await new Promise((res, rej)=>
+    navigator.geolocation.getCurrentPosition(res, rej, { timeout: 9000 }));
+  const { latitude, longitude } = pos.coords;
+  const r = await fetch(
+    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
+    `&current=temperature_2m,apparent_temperature,weather_code` +
+    `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+    `&temperature_unit=fahrenheit&forecast_days=1&timezone=auto`);
+  if (!r.ok) throw new Error("weather fetch failed");
+  const d = await r.json();
+  return `${Math.round(d.current.temperature_2m)}°F (feels like ${Math.round(d.current.apparent_temperature)}°), ` +
+    `high ${Math.round(d.daily.temperature_2m_max[0])}° / low ${Math.round(d.daily.temperature_2m_min[0])}°, ` +
+    `${WMO[d.current.weather_code] || "mixed conditions"}, ${d.daily.precipitation_probability_max[0]}% chance of rain`;
+}
+
+$("todayBtn").addEventListener("click", async ()=>{
+  const btn = $("todayBtn");
+  btn.disabled = true;
+  toast("Checking the weather outside…");
+  try{
+    $("outfitWeather").value = await todaysWeather();
+    if (!$("outfitOccasion").value.trim()) $("outfitOccasion").value = "a regular day";
+    await generateOutfits();
+  }catch(err){
+    toast("Couldn't get your location or weather — type it in and hit Dress us.");
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* ---------- Sketch the looks (Claude draws an SVG) ---------- */
+function sanitizeSvg(svg){
+  return svg
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, "")
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
+    .replace(/javascript:/gi, "")
+    .replace(/xlink:href\s*=\s*"(?!#)[^"]*"/gi, "");
+}
+
+$("sketchBtn").addEventListener("click", async ()=>{
+  if (!lastLooks) return;
+  const btn = $("sketchBtn"), box = $("sketchBox");
+  btn.disabled = true;
+  box.innerHTML = '<p class="hint">🎨 Claude is at the drawing board…</p>';
+  try{
+    const resp = await callClaude({
+      model: "claude-opus-5",
+      max_tokens: 16000,
+      messages: [{
+        role: "user",
+        content:
+`Draw one SVG illustration (viewBox="0 0 900 560") in a warm, flat, friendly cartoon style: cream #fffdf8 background, simple rounded figures with cheerful simple faces, soft colors, Georgia font for any text. Show one cartoon figure per outfit option below, standing side by side, each figure clearly wearing that option's garments in the colors described (match garment types: pants vs dress vs jacket, shoe style, etc.). Put each look's name as a small caption under its figure (fill #6b4f33). No scripts, no event handlers, no external images or links.
+
+Return ONLY the raw <svg> markup, nothing else.
+
+The outfits, styled for ${lastLooks.whoText}:
+${lastLooks.text}` }],
+    });
+    const text = responseText(resp);
+    const m = text && text.match(/<svg[\s\S]*<\/svg>/i);
+    if (!m){ box.innerHTML = ""; return toast("The sketch didn't come out — try again."); }
+    const img = document.createElement("img");
+    img.alt = "Cartoon sketch of the outfit options";
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(sanitizeSvg(m[0]));
+    box.innerHTML = "";
+    box.appendChild(img);
+    box.insertAdjacentHTML("beforeend", '<p class="hint">Cartoon-you, courtesy of Claude. Re-sketch for a different take.</p>');
+  }catch(err){
+    box.innerHTML = "";
+    friendlyError(err);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* ---------- Packing list ---------- */
+$("packBtn").addEventListener("click", async ()=>{
+  const dest = $("packDest").value.trim();
+  if (!dest) return toast("Where are you headed?");
+  const items = await dbAll("items");
+  if (!items.length) return toast("Catalog some items in the Wardrobe tab first");
+
+  const who = $("packWho").value;
+  const people = who === "both" ? ["A","B"] : [who];
+  const relevant = items.filter(i => i.owner === "S" || people.includes(i.owner));
+  if (!relevant.length) return toast("No cataloged items for that person yet");
+
+  const nights = Math.max(1, Math.min(30, parseInt($("packNights").value) || 3));
+  const btn = $("packBtn"), out = $("packOut");
+  btn.disabled = true;
+  $("packEmpty").style.display = "none";
+  out.textContent = "Claude is folding shirts…";
+  const wardrobeText = relevant.map(i=>`- ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}]`).join("\n");
+  const whoText = who === "both" ? `${state.nameA} and ${state.nameB}` : ownerName(who);
+
+  try{
+    const resp = await callClaude({
+      model: "claude-opus-5",
+      max_tokens: 8000,
+      messages: [{
+        role: "user",
+        content:
+`You're helping a married couple pack. Build packing lists using ONLY the wardrobe below — never invent items they don't own.
+
+Packing for: ${whoText}
+Destination: ${dest}
+Nights: ${nights}
+Trip notes: ${$("packNotes").value.trim() || "none"}
+
+Their available wardrobe:
+${wardrobeText}
+
+In plain text (no markdown symbols): one packing list per person. Think about the destination's likely climate and the trip length; mix-and-match pieces so they pack light (aim for fewer items that make more outfits, minimal shoes). Group each list as: outfits/clothing, shoes, extras worth grabbing. End with anything important for this trip that the wardrobe is missing — plus a one-line reminder of non-clothing essentials (chargers, toiletries, meds). Keep the whole thing under 350 words.` }],
+    });
+    const text = responseText(resp);
+    out.textContent = text || "";
+  }catch(err){
+    out.textContent = "";
+    $("packEmpty").style.display = "";
     friendlyError(err);
   }finally{
     btn.disabled = false;
