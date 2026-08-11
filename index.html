@@ -627,6 +627,7 @@
     <div class="card">
       <h2>Styling Session</h2>
       <p class="hint">Claude picks from your cataloged wardrobe. The more items in the Wardrobe tab, the better the picks.</p>
+      <p class="hint" id="weatherNow" style="display:none;color:var(--brass)"></p>
       <div class="field"><label>Who's getting dressed?</label>
         <select id="outfitWho"></select></div>
       <div class="field"><label>Occasion</label>
@@ -1775,6 +1776,50 @@ async function todaysWeather(){
     `high ${Math.round(d.daily.temperature_2m_max[0])}° / low ${Math.round(d.daily.temperature_2m_min[0])}°, ` +
     `${WMO[d.current.weather_code] || "mixed conditions"}, ${d.daily.precipitation_probability_max[0]}% chance of rain`;
 }
+
+const WEATHER_CACHE = "closet-weather";
+function showWeather(w){
+  const el = $("weatherNow");
+  el.textContent = "Right now near you: " + w;
+  el.style.display = "";
+  const inp = $("outfitWeather");
+  if (!inp.value.trim() || inp.dataset.auto === "1"){
+    inp.value = w;
+    inp.dataset.auto = "1";
+  }
+}
+$("outfitWeather").addEventListener("input", (e)=>{ e.target.dataset.auto = "0"; });
+
+async function refreshWeather(passive){
+  try{
+    const w = await todaysWeather();
+    localStorage.setItem(WEATHER_CACHE, JSON.stringify({ w, at: Date.now() }));
+    showWeather(w);
+    return w;
+  }catch(err){
+    if (!passive) toast("Couldn't get your local weather — type it in instead.");
+    return null;
+  }
+}
+
+async function initWeather(){
+  try{
+    const cached = JSON.parse(localStorage.getItem(WEATHER_CACHE));
+    if (cached && Date.now() - cached.at < 60*60*1000) showWeather(cached.w);
+  }catch{}
+  let perm = "prompt";
+  try{ perm = (await navigator.permissions.query({ name: "geolocation" })).state; }catch{}
+  if (perm === "granted"){
+    refreshWeather(true);
+  }else if (perm !== "denied"){
+    // ask the first time they open Styling, not the moment the app loads
+    const tabBtn = document.querySelector('.tab[data-tab="outfits"]');
+    const once = ()=>{ tabBtn.removeEventListener("click", once); refreshWeather(true); };
+    tabBtn.addEventListener("click", once);
+  }
+  setInterval(()=>{ if (!document.hidden) refreshWeather(true); }, 30*60*1000);
+}
+initWeather();
 
 $("todayBtn").addEventListener("click", async ()=>{
   const btn = $("todayBtn");
