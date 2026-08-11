@@ -655,9 +655,12 @@
     <div class="card">
       <h2>Closet Photographs</h2>
       <p class="hint">Snap pictures of your closet, shelves, or laid-out clothes. Then let Claude catalog what it sees.</p>
-      <label class="btn upload">Add Photographs
-        <input id="photoInput" type="file" accept="image/*" multiple hidden>
-      </label>
+      <div class="actions">
+        <label class="btn upload">Add Photographs
+          <input id="photoInput" type="file" accept="image/*" multiple hidden>
+        </label>
+        <button class="btn ghost" id="analyzeAllBtn">Analyze All New</button>
+      </div>
       <div class="photos" id="photoStrip"></div>
       <p class="keynote">Photos sync between your devices as compressed copies. Pressing “Analyze” sends that photo to Claude; nothing else leaves your accounts.</p>
     </div>
@@ -1235,6 +1238,28 @@ $("photoInput").addEventListener("change", async (e)=>{
   markPhotosDirty();
   scheduleSync();
   toast("Photo added — hit Analyze when you're ready");
+});
+
+$("analyzeAllBtn").addEventListener("click", async ()=>{
+  const photos = (await dbAll("photos")).filter(p=>!p.analyzed).sort((a,b)=>a.createdAt-b.createdAt);
+  if (!photos.length) return toast("Everything's already cataloged");
+  const btn = $("analyzeAllBtn");
+  btn.disabled = true;
+  let done = 0;
+  try{
+    for (const p of photos){
+      const card = document.querySelector(`.photocard[data-id="${p.id}"]`);
+      if (!card) continue;
+      btn.textContent = `Analyzing ${done + 1} of ${photos.length}…`;
+      await analyzePhoto(p, card);
+      if (!p.analyzed) break; // a failure (e.g. missing key) — stop the run
+      done++;
+    }
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Analyze All New";
+  }
+  if (done) toast(`Cataloged ${done} photo${done === 1 ? "" : "s"} — check the Collection`);
 });
 
 async function renderPhotos(){
