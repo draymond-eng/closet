@@ -667,7 +667,14 @@
 
     <div class="card">
       <h2>The Collection</h2>
-      <p class="hint">Everything Claude found, plus anything you add by hand. Click an item's dot to change whose it is.</p>
+      <p class="hint">Everything Claude found, plus anything you add by hand. Tap the dot to change whose it is; tap the name to see its photo and set where it lives.</p>
+      <div class="actions" style="margin-bottom:10px">
+        <select class="designs" id="viewMode" style="padding:6px 10px">
+          <option value="category">View by category</option>
+          <option value="location">View by location</option>
+        </select>
+        <button class="btn ghost" id="assignHomesBtn" title="Give every unplaced item a home per the House Plan">Assign Homes</button>
+      </div>
       <div class="itemlist" id="itemList"><p class="hint">Nothing cataloged yet.</p></div>
       <div class="addrow">
         <input id="newItemName" placeholder="Add item by hand… e.g. navy blazer" maxlength="60">
@@ -768,6 +775,10 @@
 <dialog id="peekDlg" class="peek">
   <img id="peekImg" alt="Item photo">
   <p class="hint" id="peekCap" style="margin:10px 0 0"></p>
+  <div class="field" style="margin:12px 0 0;text-align:left">
+    <label>Lives in</label>
+    <select id="peekLoc"></select>
+  </div>
   <div class="actions" style="margin-top:12px">
     <button class="btn ghost" id="peekClose">Close</button>
   </div>
@@ -1306,12 +1317,18 @@ async function renderItems(){
     return;
   }
   list.innerHTML = "";
-  for (const cat of ITEM_CATS){
-    const inCat = items.filter(i=>i.category===cat);
+  const byLoc = $("viewMode").value === "location";
+  const groups = byLoc
+    ? [...LOCS, UNPLACED].map(l=>({ key: l, label: l,
+        items: items.filter(i=>(i.loc || UNPLACED) === l) }))
+    : ITEM_CATS.map(c=>({ key: c, label: `${CAT_ICONS[c]} ${c}`,
+        items: items.filter(i=>i.category === c) }));
+  for (const g of groups){
+    const inCat = g.items;
     if (!inCat.length) continue;
     const box = document.createElement("div");
     box.className = "itemcat";
-    box.innerHTML = `<b>${CAT_ICONS[cat]} ${cat} · ${inCat.length}</b>`;
+    box.innerHTML = `<b>${byLoc ? esc(g.label) : g.label} · ${inCat.length}</b>`;
     const chips = document.createElement("div");
     chips.className = "chips";
     inCat.forEach(item=>{
@@ -1886,26 +1903,90 @@ function renderPlan(){
     : `— ${done} of ${PLAN_TASKS.length} done`;
 }
 
+/* ---------- Locations: where each item lives ---------- */
+const LOCS = [
+  "Ali's rod", "Ali's towers", "Ali's long hang", "Middle rod", "Acrylic boxes",
+  "Draymond's top rod", "Draymond's lower rod", "Draymond's towers",
+  "Wire shelf", "Floor sneakers", "Cubbies",
+  "Dresser — Ali", "Dresser — Draymond", "Downstairs closet",
+];
+const UNPLACED = "Unplaced";
+$("peekLoc").innerHTML = `<option value="">${UNPLACED}</option>` +
+  LOCS.map(l=>`<option>${esc(l)}</option>`).join("");
+
+// House Plan rules: guess a home from owner + category + name
+function suggestHome(item){
+  const n = (item.name || "").toLowerCase();
+  if (item.category === "shoes"){
+    if (/heel|pump|sandal|stiletto|wedge|mule/.test(n)) return "Acrylic boxes";
+    if (/boot/.test(n)) return "Wire shelf";
+    return "Floor sneakers";
+  }
+  if (item.category === "accessories") return "Cubbies";
+  if (item.owner === "B"){
+    if (item.category === "dresses" || item.category === "outerwear") return "Ali's long hang";
+    if (item.category === "bottoms") return "Middle rod";
+    if (item.category === "tops") return /hoodie|sweatshirt|sweater|knit|cardigan/.test(n) ? "Ali's towers" : "Ali's rod";
+    return "Ali's towers";
+  }
+  if (item.owner === "A"){
+    if (item.category === "outerwear") return "Draymond's top rod";
+    if (item.category === "bottoms") return "Draymond's lower rod";
+    if (item.category === "tops"){
+      if (/hoodie|sweatshirt|sweater|gym|jersey/.test(n)) return "Draymond's towers";
+      return /dress shirt|button|oxford|blazer/.test(n) ? "Draymond's top rod" : "Draymond's lower rod";
+    }
+    return "Draymond's towers";
+  }
+  return "";
+}
+
+$("assignHomesBtn").addEventListener("click", async ()=>{
+  const items = await dbAll("items");
+  let placed = 0;
+  for (const it of items){
+    if (it.loc) continue;
+    const home = suggestHome(it);
+    if (home){ it.loc = home; await putItem(it); placed++; }
+  }
+  renderItems();
+  scheduleSync();
+  toast(placed ? `Gave ${placed} item${placed===1?"":"s"} a home — check "View by location"` : "Everything already has a home");
+});
+
+$("viewMode").addEventListener("change", renderItems);
+
 /* ---------- Item peek: tap a chip to see its photo ---------- */
+let peekingItem = null;
+$("peekLoc").addEventListener("change", async (e)=>{
+  if (!peekingItem) return;
+  peekingItem.loc = e.target.value || null;
+  await putItem(peekingItem);
+  renderItems();
+  scheduleSync();
+});
 async function peekItem(item){
+  peekingItem = item;
   const img = $("peekImg"), cap = $("peekCap");
   cap.textContent = item.name +
     (item.color ? " · " + item.color : "") + " · " + ownerName(item.owner);
+  $("peekLoc").value = item.loc || "";
+  img.style.display = "";
   if (item.thumb){
     img.src = "data:image/jpeg;base64," + item.thumb;
-    $("peekDlg").showModal();
-    return;
-  }
-  if (item.photoId){
-    const photos = await dbAll("photos");
-    const ph = photos.find(x=>x.id === item.photoId);
-    if (ph){
-      img.src = URL.createObjectURL(ph.blob);
-      $("peekDlg").showModal();
-      return;
+  }else{
+    let shown = false;
+    if (item.photoId){
+      const photos = await dbAll("photos");
+      const ph = photos.find(x=>x.id === item.photoId);
+      if (ph){ img.src = URL.createObjectURL(ph.blob); shown = true; }
+    }
+    if (!shown){
+      img.style.display = "none";
+      cap.textContent += " · no photo yet";
     }
   }
-  toast("No photo for this one — it was added by hand.");
+  $("peekDlg").showModal();
 }
 $("peekClose").addEventListener("click", ()=>$("peekDlg").close());
 
