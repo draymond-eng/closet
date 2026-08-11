@@ -460,6 +460,12 @@
   dialog input{border-radius:2px}
   .toast{border-radius:2px;letter-spacing:.06em;font-size:12.5px;background:var(--text)}
 
+  /* Item peek */
+  .peek{max-width:560px;text-align:center}
+  .peek img{max-width:100%;max-height:62vh;display:block;margin:0 auto;border:1px solid var(--line)}
+  .chip .nm{cursor:zoom-in}
+  .chip .nm:hover{color:var(--brass)}
+
   /* The Drawer Ledger */
   .drawerledger{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:12px}
   .stack{border:1px solid var(--line);padding:12px 12px 10px}
@@ -754,6 +760,15 @@
     </div>
   </div>
 </div>
+
+<!-- ================= ITEM PEEK ================= -->
+<dialog id="peekDlg" class="peek">
+  <img id="peekImg" alt="Item photo">
+  <p class="hint" id="peekCap" style="margin:10px 0 0"></p>
+  <div class="actions" style="margin-top:12px">
+    <button class="btn ghost" id="peekClose">Close</button>
+  </div>
+</dialog>
 
 <!-- ================= SETTINGS ================= -->
 <dialog id="settingsDlg">
@@ -1296,7 +1311,12 @@ async function renderItems(){
         renderItems();
         scheduleSync();
       });
-      chip.append(dot, document.createTextNode(item.name + " "), x);
+      const nm = document.createElement("span");
+      nm.className = "nm";
+      nm.textContent = item.name;
+      nm.title = "Tap to see its photo";
+      nm.addEventListener("click", ()=>peekItem(item));
+      chip.append(dot, nm, x);
       chips.appendChild(chip);
     });
     box.appendChild(chips);
@@ -1646,16 +1666,35 @@ function friendlyError(err){
 }
 
 /* ---------- Photo analysis (vision + structured output) ---------- */
-async function blobToScaledBase64(blob, maxEdge = 2000){
+async function scaledCanvas(blob, maxEdge = 2000){
   const bmp = await createImageBitmap(blob);
   const scale = Math.min(1, maxEdge / Math.max(bmp.width, bmp.height));
-  const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
   const canvas = document.createElement("canvas");
-  canvas.width = w; canvas.height = h;
-  canvas.getContext("2d").drawImage(bmp, 0, 0, w, h);
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  canvas.getContext("2d").drawImage(bmp, 0, 0, canvas.width, canvas.height);
   bmp.close();
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-  return dataUrl.split(",")[1];
+  return canvas;
+}
+async function blobToScaledBase64(blob, maxEdge = 2000){
+  const canvas = await scaledCanvas(blob, maxEdge);
+  return canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+}
+// Crop one item's little portrait out of the analyzed photo
+function cropThumb(canvas, box){
+  if (!box) return null;
+  const pad = 0.02;
+  let x = Math.max(0, (box.x - pad)) * canvas.width;
+  let y = Math.max(0, (box.y - pad)) * canvas.height;
+  let w = Math.min(canvas.width - x, (box.w + pad * 2) * canvas.width);
+  let h = Math.min(canvas.height - y, (box.h + pad * 2) * canvas.height);
+  if (w < 12 || h < 12) return null;
+  const out = document.createElement("canvas");
+  const sc = Math.min(1, 220 / Math.max(w, h));
+  out.width = Math.round(w * sc);
+  out.height = Math.round(h * sc);
+  out.getContext("2d").drawImage(canvas, x, y, w, h, 0, 0, out.width, out.height);
+  return out.toDataURL("image/jpeg", 0.8).split(",")[1];
 }
 
 const ANALYSIS_SCHEMA = {
@@ -1668,12 +1707,21 @@ const ANALYSIS_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["name", "category", "color", "owner"],
+        required: ["name", "category", "color", "owner", "box"],
         properties: {
           name: { type: "string" },
           category: { type: "string", enum: ITEM_CATS },
           color: { type: "string" },
           owner: { type: "string", enum: ["A", "B", "unknown"] },
+          box: {
+            type: "object",
+            additionalProperties: false,
+            required: ["x", "y", "w", "h"],
+            properties: {
+              x: { type: "number" }, y: { type: "number" },
+              w: { type: "number" }, h: { type: "number" },
+            },
+          },
         },
       },
     },
@@ -1684,7 +1732,8 @@ const ANALYSIS_SCHEMA = {
 async function analyzePhoto(photo, card){
   try{
     card.classList.add("busy");
-    const imageData = await blobToScaledBase64(photo.blob);
+    const canvas = await scaledCanvas(photo.blob);
+    const imageData = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
     const resp = await callClaude({
       model: "claude-opus-5",
       max_tokens: 8000,
@@ -1695,7 +1744,7 @@ async function analyzePhoto(photo, card){
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageData } },
           { type: "text", text:
 `This is a photo of a shared closet belonging to a married couple: "${state.nameA}" (owner code A) and "${state.nameB}" (owner code B).
-List every distinct clothing item, pair of shoes, or accessory you can identify. Give each a short, specific name (e.g. "olive utility jacket", "black ankle boots"), its dominant color, and a category. If the styling clearly suggests whose item it is, set owner to A or B; otherwise use "unknown". In "observations", add one or two friendly sentences about the closet's current organization.` },
+List every distinct clothing item, pair of shoes, or accessory you can identify. Give each a short, specific name (e.g. "olive utility jacket", "black ankle boots"), its dominant color, and a category. If the styling clearly suggests whose item it is, set owner to A or B; otherwise use "unknown". For each item, give "box": its tight bounding box in this image as fractions of the image size (x, y = top-left corner; w, h = width and height; all between 0 and 1). In "observations", add one or two friendly sentences about the closet's current organization.` },
         ],
       }],
     });
@@ -1707,7 +1756,7 @@ List every distinct clothing item, pair of shoes, or accessory you can identify.
       await putItem({
         id: uid(), name: it.name, category: it.category, color: it.color,
         owner: it.owner === "unknown" ? "S" : it.owner,
-        photoId: photo.id, createdAt: Date.now() + added,
+        photoId: photo.id, thumb: cropThumb(canvas, it.box), createdAt: Date.now() + added,
       });
       added++;
     }
@@ -1811,6 +1860,29 @@ function renderPlan(){
     ? "— all done. The showroom is open. 🥂"
     : `— ${done} of ${PLAN_TASKS.length} done`;
 }
+
+/* ---------- Item peek: tap a chip to see its photo ---------- */
+async function peekItem(item){
+  const img = $("peekImg"), cap = $("peekCap");
+  cap.textContent = item.name +
+    (item.color ? " · " + item.color : "") + " · " + ownerName(item.owner);
+  if (item.thumb){
+    img.src = "data:image/jpeg;base64," + item.thumb;
+    $("peekDlg").showModal();
+    return;
+  }
+  if (item.photoId){
+    const photos = await dbAll("photos");
+    const ph = photos.find(x=>x.id === item.photoId);
+    if (ph){
+      img.src = URL.createObjectURL(ph.blob);
+      $("peekDlg").showModal();
+      return;
+    }
+  }
+  toast("No photo for this one — it was added by hand.");
+}
+$("peekClose").addEventListener("click", ()=>$("peekDlg").close());
 
 /* ---------- The Edit: keep / donate / toss / try on ---------- */
 const VERDICT_SCHEMA = {
