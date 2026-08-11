@@ -1891,6 +1891,11 @@ render();
 renderPhotos();
 renderItems();
 if (localStorage.getItem(SYNC_TOKEN_STORE)) syncNow().catch(()=>{});
+// Pull fresh whenever the app comes back into view, and every 90s while open
+document.addEventListener("visibilitychange", ()=>{
+  if (!document.hidden) syncNow().catch(()=>{});
+});
+setInterval(()=>{ if (!document.hidden) syncNow().catch(()=>{}); }, 90000);
 </script>
 </body>
 </html>
