@@ -460,6 +460,25 @@
   dialog input{border-radius:2px}
   .toast{border-radius:2px;letter-spacing:.06em;font-size:12.5px;background:var(--text)}
 
+  /* The Edit */
+  .editblock{display:flex;gap:16px;border:1px solid var(--line);padding:14px;margin-top:14px;align-items:flex-start}
+  .editblock > img{width:110px;height:110px;object-fit:cover;border:1px solid var(--line);flex:none}
+  .editbody{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px}
+  .verdictrow{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:15px;border-bottom:1px dashed var(--line);padding-bottom:8px}
+  .verdictrow:last-child{border-bottom:none}
+  .verdictrow b{font-family:"Jost",sans-serif;font-weight:500;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+  .verdictrow > span:not(.vbadge){color:var(--muted)}
+  .vbadge{
+    font-family:"Jost",sans-serif;font-size:9px;font-weight:500;letter-spacing:.2em;
+    color:#fff;padding:3px 9px;flex:none;
+  }
+  .vadd{
+    font-family:"Jost",sans-serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    border:1px solid var(--line);background:none;padding:4px 10px;color:var(--text);
+  }
+  .vadd:hover{border-color:var(--brass)}
+  .vadd:disabled{color:var(--muted);cursor:default}
+
   /* The House Plan */
   .planzones{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 22px;margin-top:6px}
   .planzones .zone{border-left:2px solid var(--brass);padding:2px 0 2px 12px}
@@ -644,6 +663,15 @@
       <p class="hint">Claude combines your cataloged wardrobe with your closet design from the Design tab and proposes where everything should live.</p>
       <button class="btn" id="organizeBtn">Compose Our Organizing Plan</button>
       <div class="aiout" id="organizeOut"></div>
+    </div>
+
+    <div class="card span2">
+      <h2>The Edit — Keep, Donate, or Toss</h2>
+      <p class="hint">Not sure something deserves its spot? Photograph it — solo, or a few pieces laid flat on the bed — and get an honest verdict on its condition. Fit can't be judged from a photo, so "does this still fit" gets you sent to the mirror with instructions.</p>
+      <label class="btn upload">Judge a Photo
+        <input id="editInput" type="file" accept="image/*" multiple hidden>
+      </label>
+      <div id="editOut"></div>
     </div>
   </div>
 </div>
@@ -1734,6 +1762,109 @@ function renderPlan(){
   $("planProgress").textContent = done === PLAN_TASKS.length
     ? "— all done. The showroom is open. 🥂"
     : `— ${done} of ${PLAN_TASKS.length} done`;
+}
+
+/* ---------- The Edit: keep / donate / toss / try on ---------- */
+const VERDICT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["items"],
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "verdict", "reason", "category", "color", "owner"],
+        properties: {
+          name: { type: "string" },
+          verdict: { type: "string", enum: ["keep", "donate", "toss", "try_on"] },
+          reason: { type: "string" },
+          category: { type: "string", enum: ITEM_CATS },
+          color: { type: "string" },
+          owner: { type: "string", enum: ["A", "B", "unknown"] },
+        },
+      },
+    },
+  },
+};
+const VERDICT_STYLE = {
+  keep: ["KEEP", "var(--s)"],
+  donate: ["DONATE", "var(--brass)"],
+  toss: ["TOSS", "var(--bad)"],
+  try_on: ["TRY ON", "var(--muted)"],
+};
+
+$("editInput").addEventListener("change", async (e)=>{
+  const files = [...e.target.files];
+  e.target.value = "";
+  for (const file of files) await judgeItemPhoto(file);
+});
+
+async function judgeItemPhoto(file){
+  const out = $("editOut");
+  const block = document.createElement("div");
+  block.className = "editblock";
+  const img = document.createElement("img");
+  img.src = URL.createObjectURL(file);
+  const body = document.createElement("div");
+  body.className = "editbody";
+  body.innerHTML = '<p class="hint" style="margin:0">The editor is deliberating…</p>';
+  block.append(img, body);
+  out.prepend(block);
+  try{
+    const data64 = await blobToScaledBase64(file);
+    const resp = await callClaude({
+      model: "claude-opus-5",
+      max_tokens: 8000,
+      output_config: { format: { type: "json_schema", schema: VERDICT_SCHEMA } },
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: data64 } },
+          { type: "text", text:
+`You are a kind but honest wardrobe editor for a married couple, ${state.nameA} (owner code A) and ${state.nameB} (owner code B). For each distinct clothing item or pair of shoes in this photo, give a verdict: keep, donate, toss, or try_on.
+
+Judge only what you can SEE:
+- Visible wear: pilling, fading, stains, yellowing, stretched-out knits, frayed hems.
+- Shoes: sole wear, scuffs, creasing — and distinguish dirty-but-cleanable (keep, with a cleaning tip) from genuinely worn out (donate or toss).
+- How dated or versatile the piece looks today.
+You CANNOT judge fit from a photo. If the real question is fit ("looks too small"), verdict try_on and say exactly what to check in the mirror — shoulders, button pull, length.
+toss is reserved for damaged-beyond-donating. Everything wearable that just isn't earning its spot is donate.
+One short, honest, kind sentence of reasoning per item. If you can guess whose item it is, set owner; else "unknown".` },
+        ],
+      }],
+    });
+    const text = responseText(resp);
+    if (!text){ body.innerHTML = '<p class="hint" style="margin:0">No verdict — check your Claude key and try again.</p>'; return; }
+    const data = JSON.parse(text);
+    body.innerHTML = "";
+    for (const it of data.items){
+      const [label, color] = VERDICT_STYLE[it.verdict] || VERDICT_STYLE.try_on;
+      const row = document.createElement("div");
+      row.className = "verdictrow";
+      row.innerHTML = `<span class="vbadge" style="background:${color}">${label}</span><b>${esc(it.name)}</b><span>${esc(it.reason)}</span>`;
+      if (it.verdict === "keep" || it.verdict === "try_on"){
+        const b = document.createElement("button");
+        b.className = "vadd";
+        b.textContent = "+ Collection";
+        b.addEventListener("click", async ()=>{
+          await putItem({ id: uid(), name: it.name, category: it.category, color: it.color,
+            owner: it.owner === "unknown" ? "S" : it.owner, createdAt: Date.now() });
+          renderItems();
+          scheduleSync();
+          b.textContent = "✓ In the collection";
+          b.disabled = true;
+        });
+        row.appendChild(b);
+      }
+      body.appendChild(row);
+    }
+  }catch(err){
+    body.innerHTML = '<p class="hint" style="margin:0">That one failed — try again.</p>';
+    if (err instanceof SyntaxError) toast("Couldn't parse the verdict — try again.");
+    else friendlyError(err);
+  }
 }
 
 /* ---------- Organizing plan ---------- */
