@@ -460,6 +460,22 @@
   dialog input{border-radius:2px}
   .toast{border-radius:2px;letter-spacing:.06em;font-size:12.5px;background:var(--text)}
 
+  /* The House Plan */
+  .planzones{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 22px;margin-top:6px}
+  .planzones .zone{border-left:2px solid var(--brass);padding:2px 0 2px 12px}
+  .planzones .zone b{display:block;font-family:"Jost",sans-serif;font-weight:500;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+  .planzones .zone span{font-size:14.5px;color:var(--muted)}
+  .checklist{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+  .checklist label{
+    display:flex;align-items:baseline;gap:11px;padding:7px 4px;cursor:pointer;
+    font-family:"Cormorant Garamond",Georgia,serif;font-size:16.5px;border-bottom:1px dashed var(--line);
+  }
+  .checklist label:last-child{border-bottom:none}
+  .checklist input{appearance:none;width:15px;height:15px;border:1px solid var(--muted);border-radius:1px;flex:none;position:relative;top:2px;cursor:pointer;margin:0}
+  .checklist input:checked{background:var(--brass);border-color:var(--brass)}
+  .checklist input:checked::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px}
+  .checklist label.done{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--brass)}
+
   /* Real Washington-closet gear */
   .drawer.meshd{
     background:
@@ -610,6 +626,17 @@
         <select id="newItemOwner"></select>
         <button class="btn ghost" id="addItemBtn">Add</button>
       </div>
+    </div>
+
+    <div class="card span2">
+      <h2>The House Plan</h2>
+      <p class="hint">Where everything lives in the Washington Closet — agreed, mapped, and checkable. Checkmarks sync to every device, so split up and conquer.</p>
+      <div class="planzones" id="planZones"></div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-top:20px">
+        <h2 style="margin:0">Move-In Checklist</h2>
+        <span class="hint" id="planProgress" style="margin:0"></span>
+      </div>
+      <div class="checklist" id="planList"></div>
     </div>
 
     <div class="card span2">
@@ -1379,7 +1406,16 @@ async function syncNow(interactive){
     }
     writeStore(mergedD);
 
-    const payload = { v:1, updatedAt: Date.now(), items: merged, deleted: dead, designs: mergedD, deletedDesigns: deadD };
+    // House-plan checkmarks: newest edit wins per task
+    const planL = planState();
+    const mergedPlan = { ...planL };
+    for (const [id, rp] of Object.entries(remote.plan || {})){
+      if (!mergedPlan[id] || (rp.at || 0) > (mergedPlan[id].at || 0)) mergedPlan[id] = rp;
+    }
+    localStorage.setItem(PLAN_STORE, JSON.stringify(mergedPlan));
+    renderPlan();
+
+    const payload = { v:1, updatedAt: Date.now(), items: merged, deleted: dead, designs: mergedD, deletedDesigns: deadD, plan: mergedPlan };
     const body = JSON.stringify({
       description: "Our Closet app — sync data",
       public: false,
@@ -1633,6 +1669,71 @@ List every distinct clothing item, pair of shoes, or accessory you can identify.
   }finally{
     card.classList.remove("busy");
   }
+}
+
+/* ---------- The House Plan (built-in, synced checklist) ---------- */
+const PLAN_STORE = "closet-plan";
+const PLAN_ZONES = [
+  ["Ali's rod — left wall", "Everyday tops and blouses, hung light to dark"],
+  ["Ali's mesh towers", "Folded knits, sweaters, gym wear — nothing stretchy hangs"],
+  ["Ali's long hang", "Dresses, coats, blazers; boots parked beneath"],
+  ["Middle rod", "Ali's jeans and trousers, folded over hangers"],
+  ["Acrylic boxes", "Her heels — one pair per box, favorites at eye line"],
+  ["Draymond's top rod", "Dress shirts, the burgundy blazer, ties at the end"],
+  ["Draymond's lower rod", "Pants and everyday shirts"],
+  ["Draymond's mesh towers", "Hoodies, sweatshirts, gym clothes — folded"],
+  ["Wire shelf, up top", "Boots and sometimes-shoes, toes facing out"],
+  ["The floor", "Everyday sneakers only — one tidy row per side"],
+  ["Bedroom dresser", "One column each: socks and underwear / tees / jeans and lounge"],
+  ["Downstairs closet", "Off-season, occasion wear, overflow"],
+];
+const PLAN_TASKS = [
+  ["p1",  "Clear the closet floor — sort into three piles: keep, downstairs, donate"],
+  ["p2",  "Decide the fate of anything with tags still on it"],
+  ["p3",  "Boots and sometimes-shoes up onto the wire shelf, toes out"],
+  ["p4",  "Ali's heels into the acrylic boxes, one pair per box"],
+  ["p5",  "Everyday sneakers into one row per side on the floor"],
+  ["p6",  "Pull every hoodie and sweatshirt off hangers — fold them into the towers"],
+  ["p7",  "Ali's wall: tops rehung light to dark, knits folded into her towers"],
+  ["p8",  "Ali's long hang: dresses and coats together, boots parked below"],
+  ["p9",  "Middle rod: her jeans and trousers on hangers, acrylic tidy beneath"],
+  ["p10", "Draymond's top rod: dress shirts, blazer, ties"],
+  ["p11", "Draymond's lower rod: pants and casual shirts; his hoodies into the towers"],
+  ["p12", "Caps into one bin, bags standing upright in the cubbies"],
+  ["p13", "Dresser: one column each — socks and underwear, tees, jeans and lounge"],
+  ["p14", "Carry the downstairs pile down and the donate bag out the door"],
+];
+function planState(){
+  try{ return JSON.parse(localStorage.getItem(PLAN_STORE)) || {}; }catch{ return {}; }
+}
+function renderPlan(){
+  $("planZones").innerHTML = PLAN_ZONES.map(([name, what])=>
+    `<div class="zone"><b>${esc(name)}</b><span>${esc(what)}</span></div>`).join("");
+  const st = planState();
+  const list = $("planList");
+  list.innerHTML = "";
+  let done = 0;
+  for (const [id, text] of PLAN_TASKS){
+    const checked = !!(st[id] && st[id].done);
+    if (checked) done++;
+    const label = document.createElement("label");
+    label.className = checked ? "done" : "";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = checked;
+    box.addEventListener("change", ()=>{
+      const cur = planState();
+      cur[id] = { done: box.checked, at: Date.now() };
+      localStorage.setItem(PLAN_STORE, JSON.stringify(cur));
+      renderPlan();
+      scheduleSync();
+    });
+    label.append(box, document.createTextNode(text));
+    list.appendChild(label);
+  }
+  $("planProgress").textContent = done === PLAN_TASKS.length
+    ? "— all done. The showroom is open. 🥂"
+    : `— ${done} of ${PLAN_TASKS.length} done`;
 }
 
 /* ---------- Organizing plan ---------- */
@@ -1941,6 +2042,7 @@ refreshDesignList("");
 render();
 renderPhotos();
 renderItems();
+renderPlan();
 if (localStorage.getItem(SYNC_TOKEN_STORE)) syncNow().catch(()=>{});
 // Pull fresh whenever the app comes back into view, and every 90s while open
 document.addEventListener("visibilitychange", ()=>{
