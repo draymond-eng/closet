@@ -459,6 +459,24 @@
   dialog{border-radius:4px;padding:26px 28px}
   dialog input{border-radius:2px}
   .toast{border-radius:2px;letter-spacing:.06em;font-size:12.5px;background:var(--text)}
+
+  /* Mobile: the closet scales to fit — no sideways panning */
+  html,body{max-width:100vw;overflow-x:hidden}
+  .closet.compact .mlabel{font-size:7.5px;padding:1px 3px;left:3px;bottom:2px}
+  .closet.compact .ownerbtn{font-size:8px;padding:3px 7px;letter-spacing:.08em}
+  .closet.compact .sec-foot{gap:3px}
+  .closet.compact .sec-foot input{width:30px;font-size:10px;padding:2px 2px}
+  .closet.compact .sec-foot .unit{display:none}
+  .closet.compact .sec-foot button{font-size:9px;padding:2px 4px}
+  .closet.compact .mtools button{width:17px;height:17px;font-size:9px}
+  .closet.compact .shoes{font-size:9px;gap:2px}
+  @media (max-width:700px){
+    header{padding:18px 18px}
+    h1{font-size:17px;letter-spacing:.3em;margin-right:-.3em}
+    .tabs{gap:16px;padding:12px 18px 0}
+    main,.wgrid,.ogrid{padding:14px 14px;gap:14px}
+    .card{padding:18px 16px}
+  }
 </style>
 </head>
 <body>
@@ -693,7 +711,20 @@ const CATALOG = {
   open:    { label:"Open Space",  ic:"⬜", h:12, open:true, desc:'12" — breathing room' },
 };
 const OWNERS = ["A","B","S"];
-const SCALE = 3.4; // px per inch
+let SCALE = 3.4; // px per inch — recomputed to fit the screen in fitScale()
+
+function fitScale(){
+  const wrap = document.querySelector("#tab-design .stagewrap");
+  if (!wrap || wrap.clientWidth < 60) return; // tab hidden — keep last scale
+  const totalIn = state.sections.reduce((t, s)=>t + s.width, 0) || 1;
+  const chrome = (state.sections.length - 1) * 6 + 20 + 10; // section dividers + closet frame
+  SCALE = Math.max(1.4, Math.min(3.4, (wrap.clientWidth - chrome - 10) / totalIn));
+}
+let fitTimer = null;
+window.addEventListener("resize", ()=>{
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(()=>{ fitScale(); render(); }, 200);
+});
 
 // Starter layout for a walk-in: unroll the walls left-to-right —
 // his wall, then the shared back wall, then her wall. The 6-drawer
@@ -753,6 +784,8 @@ function cycleOwner(si){
 }
 
 function render(){
+  fitScale();
+  closetEl.classList.toggle("compact", SCALE < 2.3);
   $("nameA").value = state.nameA;
   $("nameB").value = state.nameB;
   $("cHeight").value = state.height;
