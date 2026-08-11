@@ -698,17 +698,18 @@ const SCALE = 3.4; // px per inch
 // Starter layout for a walk-in: unroll the walls left-to-right —
 // his wall, then the shared back wall, then her wall. The 6-drawer
 // dresser lives in the bedroom, so the closet skips big drawer stacks.
-// Modeled on the real Washington closet (Aug 2026 photos): wire shoe
-// shelf up top on every wall, double-hung rods, mesh drawer towers and
-// bins at the back, acrylic shoe organizer + floor shoes below.
+// The real Washington closet: Ali has the left wall AND the middle,
+// Draymond has the right wall. Wire shoe shelf up top throughout, a
+// 4-drawer mesh tower on each side, dresses + hat/bag cubbies in the
+// middle. Walls unrolled left to right.
 const DEFAULT = () => ({
   nameA:"Draymond", nameB:"Ali", height:96, dresser:true, spareCloset:true,
   sections:[
-    { width:36, owner:"A", modules:["shoe","hang","hang"] },
-    { width:24, owner:"A", modules:["shoe","longhang","shelf"] },
-    { width:24, owner:"S", modules:["shelf","cubby","drawers3","hamper"] },
-    { width:24, owner:"B", modules:["shoe","longhang","shelf"] },
     { width:36, owner:"B", modules:["shoe","hang","hang"] },
+    { width:24, owner:"B", modules:["shoe","hang","drawers2","drawers2"] },
+    { width:24, owner:"B", modules:["longhang","cubby"] },
+    { width:24, owner:"A", modules:["shoe","hang","drawers2","drawers2"] },
+    { width:36, owner:"A", modules:["shoe","hang","hang"] },
   ],
 });
 let state = DEFAULT();
