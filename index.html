@@ -460,6 +460,38 @@
   dialog input{border-radius:2px}
   .toast{border-radius:2px;letter-spacing:.06em;font-size:12.5px;background:var(--text)}
 
+  /* Grand-opening splash */
+  #welcome{
+    position:fixed;inset:0;z-index:100;background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:0;text-align:center;padding:30px;
+  }
+  #welcome.leaving{transition:opacity .8s ease;opacity:0;pointer-events:none}
+  .w-ring{
+    width:92px;height:92px;border-radius:50%;border:1px solid var(--brass);
+    display:flex;align-items:center;justify-content:center;position:relative;
+    opacity:0;animation:wfade 1.2s ease .2s forwards;
+  }
+  .w-ring::before{content:"";position:absolute;inset:5px;border-radius:50%;border:1px solid rgba(168,137,78,.35)}
+  .w-ring span{font-family:"Cormorant Garamond",Georgia,serif;font-size:46px;color:var(--brass)}
+  .w-title{
+    margin-top:34px;font-family:"Cormorant Garamond",Georgia,serif;font-size:clamp(22px,5vw,34px);
+    letter-spacing:.38em;text-transform:uppercase;color:var(--text);padding-left:.38em;
+    opacity:0;animation:wfade 1.4s ease .9s forwards;
+  }
+  .w-rule{
+    width:0;height:1px;background:var(--brass);margin:22px 0;
+    animation:wrule 1s ease 1.8s forwards;
+  }
+  .w-sub{
+    font-family:"Jost",sans-serif;font-weight:300;font-size:13px;letter-spacing:.3em;
+    text-transform:uppercase;color:var(--brass);padding-left:.3em;
+    opacity:0;animation:wfade 1.2s ease 2.3s forwards;
+  }
+  .w-enter{margin-top:44px;opacity:0;animation:wfade 1s ease 3s forwards}
+  @keyframes wfade{to{opacity:1}}
+  @keyframes wrule{to{width:64px}}
+
   /* Item peek */
   .peek{max-width:560px;text-align:center}
   .peek img{max-width:100%;max-height:62vh;display:block;margin:0 auto;border:1px solid var(--line)}
@@ -579,6 +611,14 @@
 </style>
 </head>
 <body>
+
+<div id="welcome" hidden>
+  <div class="w-ring"><span>W</span></div>
+  <div class="w-title">The Washington Closet</div>
+  <div class="w-rule"></div>
+  <div class="w-sub" id="welcomeSub">A private showroom for two</div>
+  <button class="btn w-enter" id="enterBtn">Enter the Showroom</button>
+</div>
 
 <header>
   <div class="brand">
@@ -2394,6 +2434,20 @@ In plain text (no markdown symbols): one packing list per person. Think about th
 /* ============================================================
    GO
    ============================================================ */
+/* ---------- Grand opening ---------- */
+(function(){
+  const el = $("welcome");
+  if (localStorage.getItem("closet-welcomed") && location.hash !== "#welcome") return;
+  $("welcomeSub").textContent = `Curated for ${state.nameB} & ${state.nameA} · Est. 2026`;
+  el.hidden = false;
+  $("enterBtn").addEventListener("click", ()=>{
+    localStorage.setItem("closet-welcomed", "1");
+    if (location.hash === "#welcome") history.replaceState(null, "", location.pathname);
+    el.classList.add("leaving");
+    setTimeout(()=>{ el.hidden = true; }, 850);
+  });
+})();
+
 buildPalette();
 refreshDesignList("");
 render();
