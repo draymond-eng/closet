@@ -591,7 +591,7 @@
         <input id="photoInput" type="file" accept="image/*" multiple hidden>
       </label>
       <div class="photos" id="photoStrip"></div>
-      <p class="keynote">Photos never leave this browser except when you press “Analyze,” which sends that photo to Claude.</p>
+      <p class="keynote">Photos sync between your devices as compressed copies. Pressing “Analyze” sends that photo to Claude; nothing else leaves your accounts.</p>
     </div>
 
     <div class="card">
@@ -683,7 +683,7 @@
   <p>Optional: keep your wardrobe catalog and saved designs in sync across all your devices.
      Paste a GitHub personal access token (classic) with only the <b>gist</b> scope — from
      <b>github.com → Settings → Developer settings → Personal access tokens</b>. Use the same token on every
-     device. Photos stay on the device that took them; the items Claude catalogs from them sync everywhere.</p>
+     device. Your wardrobe catalog, saved designs, and compressed copies of your closet photos all sync.</p>
   <input id="ghTokenInput" type="password" placeholder="ghp_… (GitHub token, gist scope only)" autocomplete="off">
   <div class="actions" style="margin-bottom:16px">
     <button class="btn ghost" id="syncNowBtn">⇅ Sync now</button>
@@ -1122,11 +1122,15 @@ const uid = ()=>Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
 /* ---------- Photos ---------- */
 $("photoInput").addEventListener("change", async (e)=>{
   for (const file of e.target.files){
-    await dbPut("photos", { id: uid(), blob: file, analyzed: false, createdAt: Date.now() });
+    let thumb = null;
+    try{ thumb = await blobToScaledBase64(file, 1280); }catch{}
+    await putPhoto({ id: uid(), blob: file, thumb, analyzed: false, createdAt: Date.now() });
   }
   e.target.value = "";
   renderPhotos();
-  toast("Photo added — hit ✨ Analyze when you're ready");
+  markPhotosDirty();
+  scheduleSync();
+  toast("Photo added — hit Analyze when you're ready");
 });
 
 async function renderPhotos(){
@@ -1151,9 +1155,12 @@ async function renderPhotos(){
     del.textContent = "✕";
     del.style.flex = "0 0 34px";
     del.addEventListener("click", async ()=>{
-      if (!confirm("Delete this photo? (Items already cataloged from it stay.)")) return;
+      if (!confirm("Delete this photo everywhere? (Items already cataloged from it stay.)")) return;
       await dbDel("photos", p.id);
+      markDeletedPhoto(p.id);
+      markPhotosDirty();
       renderPhotos();
+      scheduleSync();
     });
     acts.append(an, del);
     card.appendChild(acts);
@@ -1244,12 +1251,28 @@ const TOMB_STORE = "closet-tombstones";
 const GIST_FILE = "closet-sync.json";
 
 function tombs(){
-  try{ return JSON.parse(localStorage.getItem(TOMB_STORE)) || {items:{}, designs:{}}; }
-  catch{ return {items:{}, designs:{}}; }
+  const base = {items:{}, designs:{}, photos:{}};
+  try{ return { ...base, ...(JSON.parse(localStorage.getItem(TOMB_STORE)) || {}) }; }
+  catch{ return base; }
 }
 function saveTombs(t){ localStorage.setItem(TOMB_STORE, JSON.stringify(t)); }
 function markDeletedItem(id){ const t = tombs(); t.items[id] = Date.now(); saveTombs(t); }
 function markDeletedDesign(name){ const t = tombs(); t.designs[name] = Date.now(); saveTombs(t); }
+function markDeletedPhoto(id){ const t = tombs(); t.photos[id] = Date.now(); saveTombs(t); }
+
+const PHOTOS_FILE = "closet-photos.json";
+const PHOTOS_DIRTY = "closet-photos-dirty";
+function markPhotosDirty(){ localStorage.setItem(PHOTOS_DIRTY, "1"); }
+function b64ToBlob(b64){
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: "image/jpeg" });
+}
+async function putPhoto(photo){
+  photo.updatedAt = Date.now();
+  await dbPut("photos", photo);
+}
 
 async function putItem(item){
   item.updatedAt = Date.now();
@@ -1361,6 +1384,61 @@ async function syncNow(interactive){
       gistId = ng.id;
       localStorage.setItem("closet-gist-id", ng.id);
     }
+    // Photos: compressed copies ride their own gist file, pushed only on photo changes
+    try{
+      let remoteP = { photos:{}, deleted:{} };
+      const gp = g && g.files && g.files[PHOTOS_FILE];
+      if (gp){
+        const content = gp.truncated ? await (await fetch(gp.raw_url)).text() : gp.content;
+        try{ remoteP = { ...remoteP, ...JSON.parse(content) }; }catch{}
+      }
+      const tp = tombs();
+      const localPhotos = await dbAll("photos");
+      const mergedP = {};
+      for (const ph of localPhotos){
+        if (!ph.thumb){
+          try{ ph.thumb = await blobToScaledBase64(ph.blob, 1280); await dbPut("photos", ph); }catch{ continue; }
+        }
+        mergedP[ph.id] = { id: ph.id, thumb: ph.thumb, analyzed: !!ph.analyzed,
+          createdAt: ph.createdAt || 0, updatedAt: ph.updatedAt || ph.createdAt || 0 };
+      }
+      for (const [id, rp] of Object.entries(remoteP.photos || {})){
+        const lp = mergedP[id];
+        if (!lp) mergedP[id] = rp;
+        else if ((rp.updatedAt || 0) > (lp.updatedAt || 0)) mergedP[id] = { ...lp, ...rp };
+      }
+      const deadP = { ...(remoteP.deleted || {}) };
+      for (const [id, ts] of Object.entries(tp.photos)) deadP[id] = Math.max(ts, deadP[id] || 0);
+      for (const [id, ts] of Object.entries(deadP)){
+        if (mergedP[id] && ts >= (mergedP[id].updatedAt || 0)) delete mergedP[id];
+      }
+      const dp = await db();
+      await new Promise((res, rej)=>{
+        const tx = dp.transaction("photos", "readwrite");
+        for (const ph of localPhotos) if (!mergedP[ph.id]) tx.objectStore("photos").delete(ph.id);
+        for (const [id, mp] of Object.entries(mergedP)){
+          const lp = localPhotos.find(x=>x.id === id);
+          if (!lp) tx.objectStore("photos").put({ id, blob: b64ToBlob(mp.thumb), thumb: mp.thumb,
+            analyzed: mp.analyzed, createdAt: mp.createdAt, updatedAt: mp.updatedAt });
+          else if ((mp.updatedAt || 0) > (lp.updatedAt || 0))
+            tx.objectStore("photos").put({ ...lp, analyzed: mp.analyzed, updatedAt: mp.updatedAt });
+        }
+        tx.oncomplete = res;
+        tx.onerror = ()=>rej(tx.error);
+      });
+      const remoteIds = Object.keys(remoteP.photos || {}).sort().join();
+      const mergedIds = Object.keys(mergedP).sort().join();
+      if (localStorage.getItem(PHOTOS_DIRTY) === "1" || remoteIds !== mergedIds){
+        const keep = Object.values(mergedP).sort((a, b)=>b.createdAt - a.createdAt).slice(0, 24);
+        const payloadP = { v:1, updatedAt: Date.now(),
+          photos: Object.fromEntries(keep.map(x=>[x.id, x])), deleted: deadP };
+        await gh("/gists/" + gistId, { method:"PATCH",
+          body: JSON.stringify({ files: { [PHOTOS_FILE]: { content: JSON.stringify(payloadP) } } }) });
+        localStorage.removeItem(PHOTOS_DIRTY);
+      }
+      renderPhotos();
+    }catch{ /* photo sync is best-effort; catalog sync already succeeded */ }
+
     renderItems();
     refreshDesignList($("designList").value);
     status.textContent = "✓ Synced " + new Date().toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
@@ -1536,7 +1614,8 @@ List every distinct clothing item, pair of shoes, or accessory you can identify.
       added++;
     }
     photo.analyzed = true;
-    await dbPut("photos", photo);
+    await putPhoto(photo);
+    markPhotosDirty();
     renderPhotos();
     renderItems();
     scheduleSync();
