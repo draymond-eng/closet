@@ -763,18 +763,19 @@ window.addEventListener("resize", ()=>{
 // Starter layout for a walk-in: unroll the walls left-to-right —
 // his wall, then the shared back wall, then her wall. The 6-drawer
 // dresser lives in the bedroom, so the closet skips big drawer stacks.
-// The real Washington closet: Ali has the left wall AND the middle,
-// Draymond has the right wall. Wire shoe shelf up top throughout, a
-// 4-drawer mesh tower on each side, dresses + hat/bag cubbies in the
-// middle. Walls unrolled left to right.
+// The real Washington closet, as Draymond described it, left to right:
+// Ali's rod over her mesh towers, then Ali's long hang, middle is Ali's
+// rod with the acrylic shoe boxes under, then Draymond's right side —
+// rod across the top with a second rod on one half and his mesh towers
+// on the other. Wire shoe shelf rides above the side walls.
 const DEFAULT = () => ({
   nameA:"Draymond", nameB:"Ali", height:96, dresser:true, spareCloset:true,
   sections:[
-    { width:36, owner:"B", modules:["shoe","hang","hang"] },
-    { width:24, owner:"B", modules:["shoe","longhang","bins"] },
-    { width:24, owner:"B", modules:["cubby","mesh","acrylic"] },
-    { width:24, owner:"A", modules:["shoe","hang","mesh"] },
-    { width:36, owner:"A", modules:["shoe","hang","hang"] },
+    { width:36, owner:"B", modules:["shoe","hang","mesh"] },
+    { width:24, owner:"B", modules:["shoe","longhang"] },
+    { width:24, owner:"B", modules:["hang","acrylic"] },
+    { width:30, owner:"A", modules:["shoe","hang","hang"] },
+    { width:30, owner:"A", modules:["shoe","hang","mesh"] },
   ],
 });
 let state = DEFAULT();
