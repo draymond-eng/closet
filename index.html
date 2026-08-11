@@ -460,6 +460,27 @@
   dialog input{border-radius:2px}
   .toast{border-radius:2px;letter-spacing:.06em;font-size:12.5px;background:var(--text)}
 
+  /* The Drawer Ledger */
+  .drawerledger{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:12px}
+  .stack{border:1px solid var(--line);padding:12px 12px 10px}
+  .stack h4{
+    margin:0;font-family:"Jost",sans-serif;font-weight:500;font-size:11px;
+    letter-spacing:.16em;text-transform:uppercase;
+  }
+  .stack .where{font-family:"Jost",sans-serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;margin:3px 0 10px}
+  .dwr{
+    border:1px solid var(--wood);border-radius:2px;padding:12px 8px 7px;margin-bottom:5px;
+    font-size:14px;text-align:center;position:relative;
+  }
+  .dwr::before{
+    content:"";position:absolute;top:4px;left:50%;transform:translateX(-50%);
+    width:26%;height:3px;border-radius:2px;background:var(--brass);
+  }
+  .stack.tintA h4{color:var(--a)}
+  .stack.tintB h4{color:var(--b)}
+  .stack.tintA .dwr{background:var(--a-soft)}
+  .stack.tintB .dwr{background:var(--b-soft)}
+
   /* The Edit */
   .editblock{display:flex;gap:16px;border:1px solid var(--line);padding:14px;margin-top:14px;align-items:flex-start}
   .editblock > img{width:110px;height:110px;object-fit:cover;border:1px solid var(--line);flex:none}
@@ -651,6 +672,11 @@
       <h2>The House Plan</h2>
       <p class="hint">Where everything lives in the Washington Closet — agreed, mapped, and checkable. Checkmarks sync to every device, so split up and conquer.</p>
       <div class="planzones" id="planZones"></div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-top:22px">
+        <h2 style="margin:0">The Drawer Ledger</h2>
+        <span class="hint" style="margin:0">top to bottom, light to heavy — file-fold so everything shows when the drawer opens</span>
+      </div>
+      <div class="drawerledger" id="drawerLedger"></div>
       <div style="display:flex;align-items:baseline;gap:10px;margin-top:20px">
         <h2 style="margin:0">Move-In Checklist</h2>
         <span class="hint" id="planProgress" style="margin:0"></span>
@@ -1119,6 +1145,7 @@ function renderAllOwnerText(){
   });
   renderSummary();
   refreshOwnerSelects();
+  renderPlan();
 }
 $("cHeight").addEventListener("change", (e)=>{
   state.height = Math.min(144, Math.max(48, parseInt(e.target.value)||96));
@@ -1703,16 +1730,16 @@ List every distinct clothing item, pair of shoes, or accessory you can identify.
 const PLAN_STORE = "closet-plan";
 const PLAN_ZONES = [
   ["Ali's rod — left wall", "Everyday tops and blouses, hung light to dark"],
-  ["Ali's mesh towers", "Folded knits, sweaters, gym wear — nothing stretchy hangs"],
+  ["Ali's mesh towers", "Four drawers, mapped in the Drawer Ledger below"],
   ["Ali's long hang", "Dresses, coats, blazers; boots parked beneath"],
   ["Middle rod", "Ali's jeans and trousers, folded over hangers"],
   ["Acrylic boxes", "Her heels — one pair per box, favorites at eye line"],
   ["Draymond's top rod", "Dress shirts, the burgundy blazer, ties at the end"],
   ["Draymond's lower rod", "Pants and everyday shirts"],
-  ["Draymond's mesh towers", "Hoodies, sweatshirts, gym clothes — folded"],
+  ["Draymond's mesh towers", "Four drawers, mapped in the Drawer Ledger below"],
   ["Wire shelf, up top", "Boots and sometimes-shoes, toes facing out"],
   ["The floor", "Everyday sneakers only — one tidy row per side"],
-  ["Bedroom dresser", "One column each: socks and underwear / tees / jeans and lounge"],
+  ["Bedroom dresser", "One three-drawer column each — see the Drawer Ledger"],
   ["Downstairs closet", "Off-season, occasion wear, overflow"],
 ];
 const PLAN_TASKS = [
@@ -1728,13 +1755,33 @@ const PLAN_TASKS = [
   ["p10", "Draymond's top rod: dress shirts, blazer, ties"],
   ["p11", "Draymond's lower rod: pants and casual shirts; his hoodies into the towers"],
   ["p12", "Caps into one bin, bags standing upright in the cubbies"],
-  ["p13", "Dresser: one column each — socks and underwear, tees, jeans and lounge"],
+  ["p13", "Fill all 14 drawers per the Drawer Ledger — heavy things low, small things high"],
   ["p14", "Carry the downstairs pile down and the donate bag out the door"],
 ];
+const DRAWER_LEDGER = [
+  { who: "B", where: "bedroom dresser · vanity end", drawers: [
+    "Underthings & socks", "Sleepwear & lounge", "Tees & tanks" ] },
+  { who: "A", where: "bedroom dresser", drawers: [
+    "Underwear & socks", "Undershirts & sleep", "Tees" ] },
+  { who: "B", where: "closet · left wall tower", drawers: [
+    "Workout tops & leggings", "Folded sweaters & knits", "Shorts & casual bottoms", "Sweatshirts & cozy layers" ] },
+  { who: "A", where: "closet · right wall tower", drawers: [
+    "Gym clothes", "Polos & folded knits", "Shorts", "Hoodies & sweatshirts" ] },
+];
+function renderLedger(){
+  $("drawerLedger").innerHTML = DRAWER_LEDGER.map(st => `
+    <div class="stack tint${st.who}">
+      <h4>${esc(ownerName(st.who))}</h4>
+      <span class="where">${esc(st.where)}</span>
+      ${st.drawers.map(d => `<div class="dwr">${esc(d)}</div>`).join("")}
+    </div>`).join("");
+}
+
 function planState(){
   try{ return JSON.parse(localStorage.getItem(PLAN_STORE)) || {}; }catch{ return {}; }
 }
 function renderPlan(){
+  renderLedger();
   $("planZones").innerHTML = PLAN_ZONES.map(([name, what])=>
     `<div class="zone"><b>${esc(name)}</b><span>${esc(what)}</span></div>`).join("");
   const st = planState();
