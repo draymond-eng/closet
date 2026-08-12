@@ -817,6 +817,11 @@
       <p class="hint">Where everything lives in the Washington Closet — agreed, mapped, and checkable. Checkmarks sync to every device, so split up and conquer.</p>
       <div class="planzones" id="planZones"></div>
       <div style="display:flex;align-items:baseline;gap:10px;margin-top:22px">
+        <h2 style="margin:0">The Hanging Map</h2>
+        <span class="hint" style="margin:0">left to right on every rod — if it's not listed here, it folds</span>
+      </div>
+      <div class="drawerledger" id="railMap"></div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-top:20px">
         <h2 style="margin:0">The Drawer Ledger</h2>
         <span class="hint" style="margin:0">top to bottom, light to heavy — file-fold so everything shows when the drawer opens</span>
       </div>
@@ -2104,7 +2109,25 @@ const DRAWER_LEDGER = [
   { who: "A", where: "closet · right wall tower", drawers: [
     "Workout — tees & gym shorts", "Casual shorts", "Sweats — sweatpants & joggers", "Sleep & off-season" ] },
 ];
+const RAILS = [
+  { who: "B", where: "rod · left wall", steps: [
+    "Everyday tops, light → dark", "Blouses", "Button-downs" ] },
+  { who: "B", where: "long hang · left wall", steps: [
+    "Dresses, short → long", "Blazers", "Coats", "(boots parked beneath)" ] },
+  { who: "B", where: "middle rod", steps: [
+    "Jeans, folded over hangers", "Trousers", "(acrylic heels beneath)" ] },
+  { who: "A", where: "top rod · right wall", steps: [
+    "Going-out shirts", "Dress shirts, light → dark", "The burgundy blazer", "Ties on the end" ] },
+  { who: "A", where: "lower rod · right wall", steps: [
+    "Casual button-downs", "Jeans", "Chinos & trousers" ] },
+];
 function renderLedger(){
+  $("railMap").innerHTML = RAILS.map(r => `
+    <div class="stack tint${r.who}">
+      <h4>${esc(ownerName(r.who))}</h4>
+      <span class="where">${esc(r.where)}</span>
+      ${r.steps.map((s, i) => `<div class="dwr">${s.startsWith("(") ? "" : (i + 1) + " · "}${esc(s)}</div>`).join("")}
+    </div>`).join("");
   $("drawerLedger").innerHTML = DRAWER_LEDGER.map(st => `
     <div class="stack tint${st.who}">
       <h4>${esc(ownerName(st.who))}</h4>
