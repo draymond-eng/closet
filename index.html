@@ -1939,7 +1939,7 @@ async function analyzePhoto(photo, card){
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageData } },
           { type: "text", text:
 `This is a photo of a shared closet belonging to a married couple: "${state.nameA}" (owner code A) and "${state.nameB}" (owner code B).
-${photo.note ? `The owner labeled this photo: "${photo.note}". Trust that label — it tells you what these items are (a labeled stack means several of that thing; catalog each one, telling them apart by color or detail). ` : ""}List every distinct clothing item, pair of shoes, or accessory you can identify. Give each a short, specific name (e.g. "olive utility jacket", "black ankle boots"), its dominant color, and a category. ${photo.owner ? `Everything in this photo ${photo.owner === "S" ? "is shared between them — set every owner to \"unknown\"" : `belongs to ${ownerName(photo.owner)} — set every owner to "${photo.owner}"`}; do not guess ownership.` : `If the styling clearly suggests whose item it is, set owner to A or B; otherwise use "unknown".`} For each item, give "box": its tight bounding box in this image as fractions of the image size (x, y = top-left corner; w, h = width and height; all between 0 and 1). In "observations", add one or two friendly sentences about the closet's current organization.` },
+${photo.note ? `The owner labeled this photo: "${photo.note}". Trust that label — it tells you what these items are (a labeled stack means several of that thing; catalog each one, telling them apart by color or detail). ` : ""}List every distinct clothing item, pair of shoes, or accessory you can identify. Never list hangers, storage bins, boxes, baskets, shelves, or other organizing gear — only things a person wears. Give each a short, specific name (e.g. "olive utility jacket", "black ankle boots") that never mentions the hanger it's on, its dominant color, and a category. ${photo.owner ? `Everything in this photo ${photo.owner === "S" ? "is shared between them — set every owner to \"unknown\"" : `belongs to ${ownerName(photo.owner)} — set every owner to "${photo.owner}"`}; do not guess ownership.` : `If the styling clearly suggests whose item it is, set owner to A or B; otherwise use "unknown".`} For each item, give "box": its tight bounding box in this image as fractions of the image size (x, y = top-left corner; w, h = width and height; all between 0 and 1). In "observations", add one or two friendly sentences about the closet's current organization.` },
         ],
       }],
     });
@@ -2216,7 +2216,7 @@ async function judgeItemPhoto(file){
         content: [
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: data64 } },
           { type: "text", text:
-`You are a kind but honest wardrobe editor for a married couple, ${state.nameA} (owner code A) and ${state.nameB} (owner code B). For each distinct clothing item or pair of shoes in this photo, give a verdict: keep, donate, toss, or try_on.
+`You are a kind but honest wardrobe editor for a married couple, ${state.nameA} (owner code A) and ${state.nameB} (owner code B). For each distinct clothing item or pair of shoes in this photo, give a verdict: keep, donate, toss, or try_on. Never list hangers, storage bins, boxes, or other organizing gear — only things a person wears.
 
 Judge only what you can SEE:
 - Visible wear: pilling, fading, stains, yellowing, stretched-out knits, frayed hems.
