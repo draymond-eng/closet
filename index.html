@@ -2866,7 +2866,7 @@ Vibe: ${$("outfitVibe").value.trim() || "their call"}${describeProfile() ? `\nWh
 Their available wardrobe (pick by id):
 ${wardrobeText}
 
-Give 2–3 complete looks. Each look: a fun name, "itemIds" — the exact ids of every piece head to toe (include shoes when any are cataloged), and "why" — one warm sentence on why it works for this occasion and weather. In "note": if the wardrobe is missing something important for this occasion, say so kindly; otherwise a single encouraging line.` }],
+Give 2–3 complete looks. Each look: a fun name, "itemIds" — the exact ids of every piece head to toe, and "why" — one warm sentence on why it works for this occasion and weather. A look is ONE wearable outfit: exactly one pair of shoes (when any are cataloged), exactly one bottom (or one dress instead), one base top, at most one outer layer, at most one hat, at most one belt. NEVER two items filling the same slot — no two shoes, no two pants. In "note": if the wardrobe is missing something important for this occasion, say so kindly; otherwise a single encouraging line.` }],
     });
     const text = responseText(resp);
     if (!text){
@@ -2875,6 +2875,15 @@ Give 2–3 complete looks. Each look: a fun name, "itemIds" — the exact ids of
       return;
     }
     const data = JSON.parse(text);
+    for (const lk of data.looks || []){
+      const seen = { shoes: 0, bottoms: 0, dresses: 0 };
+      lk.itemIds = (lk.itemIds || []).filter(id=>{
+        const it = byId.get(id);
+        if (!it) return false;
+        if (it.category in seen && ++seen[it.category] > 1) return false;
+        return true;
+      });
+    }
     renderLooks(data.looks || [], data.note || "", byId);
     const summary = (data.looks || []).map(lk=>{
       const names = lk.itemIds.map(id=>byId.get(id) && byId.get(id).name).filter(Boolean).join(", ");
