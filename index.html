@@ -2078,17 +2078,17 @@ const PLAN_ZONES = [
   ["Draymond's jacket rod", "Over the mesh tower — blazers and jackets"],
   ["Draymond's lower rod", "Pants and everyday shirts"],
   ["Draymond's mesh towers", "Top to bottom: workout, shorts, sweats, sleep & off-season"],
-  ["Wire shelf, up top", "Boots and sometimes-shoes, toes facing out"],
-  ["The floor", "Everyday sneakers only — one tidy row per side"],
+  ["Wire shelf, up top", "All of Dray's shoes, plus boots — toes facing out"],
+  ["The floor", "Ali's everyday sneakers in one row; Dray's gray backpack"],
   ["Bedroom dresser", "Ali's column, plus Dray's: socks small, golf & hoodies big, casual shirts big"],
   ["Downstairs closet", "Off-season, occasion wear, overflow"],
 ];
 const PLAN_TASKS = [
   ["p1",  "Clear the closet floor — sort into three piles: keep, downstairs, donate"],
   ["p2",  "Decide the fate of anything with tags still on it"],
-  ["p3",  "Boots and sometimes-shoes up onto the wire shelf, toes out"],
+  ["p3",  "All of Dray's shoes up onto the wire shelf, toes out"],
   ["p4",  "Ali's heels into the acrylic boxes, one pair per box"],
-  ["p5",  "Everyday sneakers into one row per side on the floor"],
+  ["p5",  "Ali's everyday sneakers into one row on her side of the floor"],
   ["p6",  "Pull every hoodie and sweatshirt off hangers — fold them into the towers"],
   ["p15", "Swap every rod to matching slim velvet hangers — wood stays for suits and structured blazers"],
   ["p7",  "Ali's wall: tops rehung light to dark, knits folded into her towers"],
@@ -2286,7 +2286,7 @@ $("placeBtn").addEventListener("click", async ()=>{
 The homes available in their closet — assign "loc" ONLY from this exact list:
 ${LOCS.join(" | ")}
 
-How the homes work: "Ali's rod" is her everyday hanging tops; "Ali's long hang" is dresses, coats, blazers; "Middle rod" is her jeans and trousers on hangers; "Acrylic boxes" are her heels; the "Ali tower" drawers are folded (workout, knits, shorts, cozy loungewear). "Draymond's top rod" is dress shirts and going-out shirts; "Draymond's lower rod" is pants, casual button-downs, and jerseys; "Dray jacket rod" (over his mesh tower) is blazers and jackets; the "Dray tower" drawers are folded (workout, casual shorts, sweatpants); "Dray dresser · Golf & hoodies" and "Dray dresser · Casual shirts" are his two big bedroom drawers. "Wire shelf" is boots and occasional shoes; "Floor sneakers" is everyday sneakers; "Cubbies" is accessories and bags; "Gray backpack · hats" is ${state.nameA}'s hat stash on the floor under his lower rod; "Dresser — Ali" is her folded basics; "Downstairs closet" is off-season, occasion wear, and things rarely worn.
+How the homes work: "Ali's rod" is her everyday hanging tops; "Ali's long hang" is dresses, coats, blazers; "Middle rod" is her jeans and trousers on hangers; "Acrylic boxes" are her heels; the "Ali tower" drawers are folded (workout, knits, shorts, cozy loungewear). "Draymond's top rod" is dress shirts and going-out shirts; "Draymond's lower rod" is pants, casual button-downs, and jerseys; "Dray jacket rod" (over his mesh tower) is blazers and jackets; the "Dray tower" drawers are folded (workout, casual shorts, sweatpants); "Dray dresser · Golf & hoodies" and "Dray dresser · Casual shirts" are his two big bedroom drawers. "Wire shelf" is ALL of ${state.nameA}'s shoes plus boots; "Floor sneakers" is ${state.nameB}'s everyday sneaker row; "Cubbies" is accessories and bags; "Gray backpack · hats" is ${state.nameA}'s hat stash on the floor under his lower rod; "Dresser — Ali" is her folded basics; "Downstairs closet" is off-season, occasion wear, and things rarely worn.
 
 What they told you about their lives:
 ${describeProfile() || "(no interview answers yet — place by category and common sense)"}
@@ -2341,6 +2341,7 @@ $("peekLoc").innerHTML = `<option value="">${UNPLACED}</option>` +
 function suggestHome(item){
   const n = (item.name || "").toLowerCase();
   if (item.category === "shoes"){
+    if (item.owner === "A") return "Wire shelf";
     if (/heel|pump|sandal|stiletto|wedge|mule/.test(n)) return "Acrylic boxes";
     if (/boot/.test(n)) return "Wire shelf";
     return "Floor sneakers";
