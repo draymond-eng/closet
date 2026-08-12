@@ -1416,8 +1416,10 @@ async function renderItems(){
   }
   list.innerHTML = "";
   const byLoc = $("viewMode").value === "location";
+  const allLocs = [...LOCS];
+  for (const i of items) if (i.loc && !allLocs.includes(i.loc)) allLocs.push(i.loc);
   const groups = byLoc
-    ? [...LOCS, UNPLACED].map(l=>({ key: l, label: l,
+    ? [...allLocs, UNPLACED].map(l=>({ key: l, label: l,
         items: items.filter(i=>(i.loc || UNPLACED) === l) }))
     : ITEM_CATS.map(c=>({ key: c, label: `${CAT_ICONS[c]} ${c}`,
         items: items.filter(i=>i.category === c) }));
@@ -1953,13 +1955,13 @@ ${photo.note ? `The owner labeled this photo: "${photo.note}". Trust that label 
 const PLAN_STORE = "closet-plan";
 const PLAN_ZONES = [
   ["Ali's rod — left wall", "Everyday tops and blouses, hung light to dark"],
-  ["Ali's mesh towers", "Four drawers, mapped in the Drawer Ledger below"],
+  ["Ali's mesh towers", "One purpose per drawer: workout, knits, shorts, cozy"],
   ["Ali's long hang", "Dresses, coats, blazers; boots parked beneath"],
   ["Middle rod", "Ali's jeans and trousers, folded over hangers"],
   ["Acrylic boxes", "Her heels — one pair per box, favorites at eye line"],
-  ["Draymond's top rod", "Dress shirts, the burgundy blazer, ties at the end"],
+  ["Draymond's top rod", "Dress shirts and going-out shirts, the burgundy blazer, ties at the end"],
   ["Draymond's lower rod", "Pants and everyday shirts"],
-  ["Draymond's mesh towers", "Four drawers, mapped in the Drawer Ledger below"],
+  ["Draymond's mesh towers", "One purpose per drawer: golf, workout, shorts, hoodies"],
   ["Wire shelf, up top", "Boots and sometimes-shoes, toes facing out"],
   ["The floor", "Everyday sneakers only — one tidy row per side"],
   ["Bedroom dresser", "One three-drawer column each — see the Drawer Ledger"],
@@ -1976,10 +1978,10 @@ const PLAN_TASKS = [
   ["p7",  "Ali's wall: tops rehung light to dark, knits folded into her towers"],
   ["p8",  "Ali's long hang: dresses and coats together, boots parked below"],
   ["p9",  "Middle rod: her jeans and trousers on hangers, acrylic tidy beneath"],
-  ["p10", "Draymond's top rod: dress shirts, blazer, ties"],
+  ["p10", "Draymond's top rod: dress shirts, going-out shirts, blazer, ties"],
   ["p11", "Draymond's lower rod: pants and casual shirts; his hoodies into the towers"],
   ["p12", "Caps into one bin, bags standing upright in the cubbies"],
-  ["p13", "Fill all 14 drawers per the Drawer Ledger — heavy things low, small things high"],
+  ["p13", "Fill all 14 drawers per the Drawer Ledger — one purpose per drawer, heavy things low"],
   ["p14", "Carry the downstairs pile down and the donate bag out the door"],
 ];
 const DRAWER_LEDGER = [
@@ -1988,9 +1990,9 @@ const DRAWER_LEDGER = [
   { who: "A", where: "bedroom dresser", drawers: [
     "Underwear & socks", "Undershirts & sleep", "Tees" ] },
   { who: "B", where: "closet · left wall tower", drawers: [
-    "Workout tops & leggings", "Folded sweaters & knits", "Shorts & casual bottoms", "Sweatshirts & cozy layers" ] },
+    "Workout — tops & leggings", "Knits — folded sweaters", "Shorts & casual bottoms", "Cozy — sweatshirts & lounge" ] },
   { who: "A", where: "closet · right wall tower", drawers: [
-    "Gym clothes", "Polos & folded knits", "Shorts", "Hoodies & sweatshirts" ] },
+    "Golf — polos & golf shorts", "Workout — tees & gym shorts", "Casual shorts", "Hoodies & sweatshirts" ] },
 ];
 function renderLedger(){
   $("drawerLedger").innerHTML = DRAWER_LEDGER.map(st => `
@@ -2037,8 +2039,10 @@ function renderPlan(){
 
 /* ---------- Locations: where each item lives ---------- */
 const LOCS = [
-  "Ali's rod", "Ali's towers", "Ali's long hang", "Middle rod", "Acrylic boxes",
-  "Draymond's top rod", "Draymond's lower rod", "Draymond's towers",
+  "Ali's rod", "Ali's long hang", "Middle rod", "Acrylic boxes",
+  "Ali tower · Workout", "Ali tower · Knits", "Ali tower · Shorts", "Ali tower · Cozy",
+  "Draymond's top rod", "Draymond's lower rod",
+  "Dray tower · Golf", "Dray tower · Workout", "Dray tower · Shorts", "Dray tower · Hoodies",
   "Wire shelf", "Floor sneakers", "Cubbies",
   "Dresser — Ali", "Dresser — Draymond", "Downstairs closet",
 ];
@@ -2056,19 +2060,29 @@ function suggestHome(item){
   }
   if (item.category === "accessories") return "Cubbies";
   if (item.owner === "B"){
+    if (/legging|sports bra|workout|gym|athletic|running|yoga/.test(n)) return "Ali tower · Workout";
     if (item.category === "dresses" || item.category === "outerwear") return "Ali's long hang";
-    if (item.category === "bottoms") return "Middle rod";
-    if (item.category === "tops") return /hoodie|sweatshirt|sweater|knit|cardigan/.test(n) ? "Ali's towers" : "Ali's rod";
-    return "Ali's towers";
+    if (item.category === "bottoms") return /short|bike/.test(n) ? "Ali tower · Shorts" : "Middle rod";
+    if (item.category === "tops"){
+      if (/hoodie|sweatshirt|fleece|lounge/.test(n)) return "Ali tower · Cozy";
+      if (/sweater|knit|cardigan|turtleneck/.test(n)) return "Ali tower · Knits";
+      return "Ali's rod";
+    }
+    return "Dresser — Ali";
   }
   if (item.owner === "A"){
+    if (/golf/.test(n)) return "Dray tower · Golf";
+    if (/gym|workout|athletic|training|running|jersey|dri.?fit|performance|jogger|sweatpant/.test(n)) return "Dray tower · Workout";
     if (item.category === "outerwear") return "Draymond's top rod";
-    if (item.category === "bottoms") return "Draymond's lower rod";
+    if (item.category === "bottoms") return /short/.test(n) ? "Dray tower · Shorts" : "Draymond's lower rod";
     if (item.category === "tops"){
-      if (/hoodie|sweatshirt|sweater|gym|jersey/.test(n)) return "Draymond's towers";
-      return /dress shirt|button|oxford|blazer/.test(n) ? "Draymond's top rod" : "Draymond's lower rod";
+      if (/hoodie|sweatshirt|sweater|fleece|crewneck|quarter.?zip/.test(n)) return "Dray tower · Hoodies";
+      if (/polo/.test(n)) return "Dray tower · Golf";
+      if (/dress shirt|button|oxford|blazer|linen|silk/.test(n)) return "Draymond's top rod";
+      if (/\btee\b|t.?shirt|tank|henley/.test(n)) return "Dresser — Draymond";
+      return "Draymond's lower rod";
     }
-    return "Draymond's towers";
+    return "Dresser — Draymond";
   }
   return "";
 }
@@ -2102,7 +2116,10 @@ async function peekItem(item){
   const img = $("peekImg"), cap = $("peekCap");
   cap.textContent = item.name +
     (item.color ? " · " + item.color : "") + " · " + ownerName(item.owner);
-  $("peekLoc").value = item.loc || "";
+  const pl = $("peekLoc");
+  if (item.loc && ![...pl.options].some(o=>o.value === item.loc))
+    pl.insertAdjacentHTML("beforeend", `<option>${esc(item.loc)}</option>`);
+  pl.value = item.loc || "";
   img.style.display = "";
   if (item.thumb){
     img.src = "data:image/jpeg;base64," + item.thumb;
