@@ -2119,7 +2119,7 @@ const RAILS = [
   { who: "A", where: "top rod · right wall", steps: [
     "Going-out shirts", "Dress shirts, light → dark", "Blazers, dark → light", "(suits & ties live downstairs)" ] },
   { who: "A", where: "lower rod · right wall", steps: [
-    "Casual button-downs", "Jeans", "Chinos & trousers" ] },
+    "Casual button-downs", "Jeans", "Chinos & trousers", "Jerseys on the end" ] },
 ];
 function renderLedger(){
   $("railMap").innerHTML = RAILS.map(r => `
@@ -2358,7 +2358,8 @@ function suggestHome(item){
   if (item.owner === "A"){
     if (/golf|polo|hoodie|sweatshirt|sweater|fleece|crewneck|quarter.?zip/.test(n)) return "Dray dresser · Golf & hoodies";
     if (/sweatpant|jogger|\bsweats\b/.test(n)) return "Dray tower · Sweats";
-    if (/gym|workout|athletic|training|running|jersey|dri.?fit|performance/.test(n)) return "Dray tower · Workout";
+    if (/jersey/.test(n)) return "Draymond's lower rod";
+    if (/gym|workout|athletic|training|running|dri.?fit|performance/.test(n)) return "Dray tower · Workout";
     if (item.category === "outerwear") return "Draymond's top rod";
     if (item.category === "bottoms") return /short/.test(n) ? "Dray tower · Shorts" : "Draymond's lower rod";
     if (item.category === "tops"){
