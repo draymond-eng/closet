@@ -81,7 +81,19 @@
   .tab.gear{margin-left:auto;border-radius:12px;border-bottom:1.5px solid var(--line);font-size:15px}
   .tabpane{display:none}
   .tabpane.active{display:grid}
-  #tab-wardrobe.active,#tab-outfits.active{display:block}
+  #tab-wardrobe.active,#tab-organize.active,#tab-outfits.active{display:block}
+
+  .journey{display:flex;flex-wrap:wrap;gap:10px;padding:14px 26px 0}
+  .jstep{
+    flex:1;min-width:150px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+    border:1.5px solid var(--line);border-radius:12px;background:#fffef9;padding:9px 13px;
+    cursor:pointer;text-align:left;
+  }
+  .jstep i{font-style:normal;font-size:10px;letter-spacing:.18em;color:var(--brass,#a8894e)}
+  .jstep b{font-size:12.5px;color:var(--wood-dark)}
+  .jstep span{font-size:11px;color:var(--muted)}
+  .jstep.on{border-color:var(--brass,#a8894e);box-shadow:var(--shadow)}
+  @media (max-width:640px){ .jstep{min-width:calc(50% - 10px)} }
 
   main{display:grid;grid-template-columns:250px 1fr 270px;gap:18px;padding:18px 26px;align-items:start}
   @media (max-width:1050px){ main{grid-template-columns:1fr} }
@@ -447,6 +459,8 @@
   .photocard{border-radius:2px}
   .photocard .badge{border-radius:0;letter-spacing:.1em;text-transform:uppercase;font-size:9px;background:var(--brass)}
   .photocard.busy::after{content:"Your stylist is looking…";font-family:"Jost",sans-serif}
+  .jstep{border-radius:0}
+  .jstep b{font-family:"Jost",sans-serif;text-transform:uppercase;letter-spacing:.14em;font-size:11px}
   .itemcat b{font-family:"Jost",sans-serif;font-weight:500;letter-spacing:.2em;font-size:11px}
   .chip{border-radius:2px;font-size:12px;font-weight:300;letter-spacing:.03em}
   .addrow input,.addrow select{border-radius:2px}
@@ -612,6 +626,7 @@
     h1{font-size:17px;letter-spacing:.3em;margin-right:-.3em}
     .tabs{gap:16px;padding:12px 18px 0}
     main,.wgrid,.ogrid{padding:14px 14px;gap:14px}
+    .journey{padding:12px 14px 0;gap:8px}
     .card{padding:18px 16px}
   }
 </style>
@@ -645,9 +660,12 @@
 <nav class="tabs">
   <button class="tab active" data-tab="design">Design</button>
   <button class="tab" data-tab="wardrobe">Collection</button>
+  <button class="tab" data-tab="organize">Organize</button>
   <button class="tab" data-tab="outfits">Styling</button>
   <button class="tab gear" id="settingsBtn" title="Claude API key & sync">Settings</button>
 </nav>
+
+<div class="journey" id="journey"></div>
 
 <!-- ================= DESIGN TAB ================= -->
 <main class="tabpane active" id="tab-design">
@@ -733,6 +751,21 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ================= ORGANIZE TAB ================= -->
+<div class="tabpane" id="tab-organize">
+  <div class="wgrid">
+    <div class="card span2">
+      <h2>The Edit — Keep, Donate, or Toss</h2>
+      <p class="hint">A great closet starts with less. Photograph anything on the fence — solo, or a few pieces laid flat on the bed — and get an honest verdict on its condition. Fit can't be judged from a photo, so "does this still fit" gets you sent to the mirror with instructions.</p>
+      <label class="btn upload">Judge a Photo
+        <input id="editInput" type="file" accept="image/*" multiple hidden>
+      </label>
+      <div id="editOut"></div>
+    </div>
+
     <div class="card span2">
       <h2>The House Plan</h2>
       <p class="hint">Where everything lives in the Washington Closet — agreed, mapped, and checkable. Checkmarks sync to every device, so split up and conquer.</p>
@@ -751,18 +784,9 @@
 
     <div class="card span2">
       <h2>The Arrangement</h2>
-      <p class="hint">Claude combines your cataloged wardrobe with your closet design from the Design tab and proposes where everything should live.</p>
+      <p class="hint">Claude combines your cataloged Collection with your closet design and proposes where everything should live — a second opinion on the House Plan above.</p>
       <button class="btn" id="organizeBtn">Compose Our Organizing Plan</button>
       <div class="aiout" id="organizeOut"></div>
-    </div>
-
-    <div class="card span2">
-      <h2>The Edit — Keep, Donate, or Toss</h2>
-      <p class="hint">Not sure something deserves its spot? Photograph it — solo, or a few pieces laid flat on the bed — and get an honest verdict on its condition. Fit can't be judged from a photo, so "does this still fit" gets you sent to the mirror with instructions.</p>
-      <label class="btn upload">Judge a Photo
-        <input id="editInput" type="file" accept="image/*" multiple hidden>
-      </label>
-      <div id="editOut"></div>
     </div>
   </div>
 </div>
@@ -772,7 +796,7 @@
   <div class="ogrid">
     <div class="card">
       <h2>Styling Session</h2>
-      <p class="hint">Claude picks from your cataloged wardrobe. The more items in the Wardrobe tab, the better the picks.</p>
+      <p class="hint">Claude picks from your cataloged wardrobe. The more items in the Collection tab, the better the picks.</p>
       <p class="hint" id="weatherNow" style="display:none;color:var(--brass)"></p>
       <div class="field"><label>Who's getting dressed?</label>
         <select id="outfitWho"></select></div>
@@ -897,6 +921,7 @@ document.querySelectorAll(".tab[data-tab]").forEach(btn=>{
     document.querySelectorAll(".tabpane").forEach(p=>p.classList.remove("active"));
     btn.classList.add("active");
     $("tab-" + btn.dataset.tab).classList.add("active");
+    renderJourney();
   });
 });
 
@@ -1193,6 +1218,7 @@ $("saveBtn").addEventListener("click", ()=>{
   refreshDesignList(name);
   toast(`Saved “${name}”`);
   scheduleSync();
+  renderJourney();
 });
 $("designList").addEventListener("change", (e)=>{
   const name = e.target.value;
@@ -1428,6 +1454,7 @@ async function renderPhotos(){
 
 /* ---------- Items ---------- */
 async function renderItems(){
+  renderJourney();
   const items = (await dbAll("items")).sort((a,b)=>a.createdAt-b.createdAt);
   const list = $("itemList");
   if (!items.length){
@@ -2056,6 +2083,32 @@ function renderPlan(){
   $("planProgress").textContent = done === PLAN_TASKS.length
     ? "— all done. The showroom is open. 🥂"
     : `— ${done} of ${PLAN_TASKS.length} done`;
+  renderJourney();
+}
+
+/* ---------- The Journey: designer's method, four steps ---------- */
+const JOURNEY = [
+  ["design",   "01", "Design the space"],
+  ["wardrobe", "02", "Catalog the clothes"],
+  ["organize", "03", "Edit & organize"],
+  ["outfits",  "04", "Get dressed"],
+];
+async function renderJourney(){
+  const items = await dbAll("items");
+  const st = planState();
+  const done = PLAN_TASKS.filter(([id])=>st[id] && st[id].done).length;
+  const saved = Object.keys(readStore()).length;
+  const status = {
+    design:   saved ? `${saved} design${saved === 1 ? "" : "s"} saved` : "sketch it to scale",
+    wardrobe: items.length ? `${items.length} item${items.length === 1 ? "" : "s"} cataloged` : "photograph everything",
+    organize: `${done} of ${PLAN_TASKS.length} tasks done`,
+    outfits:  items.length >= 5 ? "the fun part" : "catalog first, then play",
+  };
+  const active = document.querySelector(".tab.active")?.dataset.tab;
+  $("journey").innerHTML = JOURNEY.map(([t, num, label])=>
+    `<button class="jstep${t === active ? " on" : ""}" data-jump="${t}"><i>${num}</i><b>${label}</b><span>${esc(status[t])}</span></button>`).join("");
+  $("journey").querySelectorAll("[data-jump]").forEach(b=>
+    b.addEventListener("click", ()=>document.querySelector(`.tab[data-tab="${b.dataset.jump}"]`).click()));
 }
 
 /* ---------- Locations: where each item lives ---------- */
