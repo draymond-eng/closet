@@ -708,6 +708,7 @@
         <select class="designs" id="photoOwner" style="padding:6px 10px" title="Whose things are in the photos you're adding?"></select>
         <input class="designs" id="photoNote" maxlength="60" placeholder="Quick label… e.g. workout shirts" style="padding:6px 10px;flex:1;min-width:0" title="What's in the photos you're adding? Claude trusts this when cataloging.">
         <button class="btn ghost" id="analyzeAllBtn">Analyze All New</button>
+        <button class="btn ghost" id="clearAnalyzedBtn" title="Delete photos already cataloged — the items and their pictures stay">Clear Cataloged</button>
       </div>
       <div class="photos" id="photoStrip"></div>
       <p class="keynote">Photos sync between your devices as compressed copies. Pressing “Analyze” sends that photo to Claude; nothing else leaves your accounts.</p>
@@ -1309,6 +1310,20 @@ $("photoInput").addEventListener("change", async (e)=>{
   toast("Photo added — hit Analyze when you're ready");
 });
 
+$("clearAnalyzedBtn").addEventListener("click", async ()=>{
+  const done = (await dbAll("photos")).filter(p=>p.analyzed);
+  if (!done.length) return toast("No cataloged photos to clear");
+  if (!confirm(`Delete ${done.length} cataloged photo${done.length === 1 ? "" : "s"} everywhere? The items pulled from them stay, pictures and all.`)) return;
+  for (const p of done){
+    await dbDel("photos", p.id);
+    markDeletedPhoto(p.id);
+  }
+  markPhotosDirty();
+  renderPhotos();
+  scheduleSync();
+  toast(`Cleared ${done.length} photo${done.length === 1 ? "" : "s"} — the Collection is untouched`);
+});
+
 $("analyzeAllBtn").addEventListener("click", async ()=>{
   const photos = (await dbAll("photos")).filter(p=>!p.analyzed).sort((a,b)=>a.createdAt-b.createdAt);
   if (!photos.length) return toast("Everything's already cataloged");
@@ -1393,7 +1408,11 @@ async function renderPhotos(){
     del.textContent = "✕";
     del.style.flex = "0 0 34px";
     del.addEventListener("click", async ()=>{
-      if (!confirm("Delete this photo everywhere? (Items already cataloged from it stay.)")) return;
+      const kept = (await dbAll("items")).filter(i=>i.photoId === p.id).length;
+      const msg = p.analyzed
+        ? `Delete this photo everywhere? The ${kept} item${kept === 1 ? "" : "s"} cataloged from it stay, pictures and all.`
+        : "Delete this photo everywhere? It hasn't been analyzed yet.";
+      if (!confirm(msg)) return;
       await dbDel("photos", p.id);
       markDeletedPhoto(p.id);
       markPhotosDirty();
@@ -1961,7 +1980,7 @@ const PLAN_ZONES = [
   ["Acrylic boxes", "Her heels — one pair per box, favorites at eye line"],
   ["Draymond's top rod", "Dress shirts and going-out shirts, the burgundy blazer, ties at the end"],
   ["Draymond's lower rod", "Pants and everyday shirts"],
-  ["Draymond's mesh towers", "One purpose per drawer: golf, workout, shorts, hoodies"],
+  ["Draymond's mesh towers", "One purpose per drawer: golf, workout, shorts, sweats"],
   ["Wire shelf, up top", "Boots and sometimes-shoes, toes facing out"],
   ["The floor", "Everyday sneakers only — one tidy row per side"],
   ["Bedroom dresser", "One three-drawer column each — see the Drawer Ledger"],
@@ -1992,7 +2011,7 @@ const DRAWER_LEDGER = [
   { who: "B", where: "closet · left wall tower", drawers: [
     "Workout — tops & leggings", "Knits — folded sweaters", "Shorts & casual bottoms", "Cozy — sweatshirts & lounge" ] },
   { who: "A", where: "closet · right wall tower", drawers: [
-    "Golf — polos & golf shorts", "Workout — tees & gym shorts", "Casual shorts", "Hoodies & sweatshirts" ] },
+    "Golf — polos & golf shorts", "Workout — tees & gym shorts", "Casual shorts", "Sweats — hoodies & sweatpants" ] },
 ];
 function renderLedger(){
   $("drawerLedger").innerHTML = DRAWER_LEDGER.map(st => `
@@ -2042,7 +2061,7 @@ const LOCS = [
   "Ali's rod", "Ali's long hang", "Middle rod", "Acrylic boxes",
   "Ali tower · Workout", "Ali tower · Knits", "Ali tower · Shorts", "Ali tower · Cozy",
   "Draymond's top rod", "Draymond's lower rod",
-  "Dray tower · Golf", "Dray tower · Workout", "Dray tower · Shorts", "Dray tower · Hoodies",
+  "Dray tower · Golf", "Dray tower · Workout", "Dray tower · Shorts", "Dray tower · Sweats",
   "Wire shelf", "Floor sneakers", "Cubbies",
   "Dresser — Ali", "Dresser — Draymond", "Downstairs closet",
 ];
@@ -2061,10 +2080,10 @@ function suggestHome(item){
   if (item.category === "accessories") return "Cubbies";
   if (item.owner === "B"){
     if (/legging|sports bra|workout|gym|athletic|running|yoga/.test(n)) return "Ali tower · Workout";
+    if (/hoodie|sweatshirt|fleece|lounge|sweatpant|jogger|\bsweats\b/.test(n)) return "Ali tower · Cozy";
     if (item.category === "dresses" || item.category === "outerwear") return "Ali's long hang";
     if (item.category === "bottoms") return /short|bike/.test(n) ? "Ali tower · Shorts" : "Middle rod";
     if (item.category === "tops"){
-      if (/hoodie|sweatshirt|fleece|lounge/.test(n)) return "Ali tower · Cozy";
       if (/sweater|knit|cardigan|turtleneck/.test(n)) return "Ali tower · Knits";
       return "Ali's rod";
     }
@@ -2072,11 +2091,11 @@ function suggestHome(item){
   }
   if (item.owner === "A"){
     if (/golf/.test(n)) return "Dray tower · Golf";
-    if (/gym|workout|athletic|training|running|jersey|dri.?fit|performance|jogger|sweatpant/.test(n)) return "Dray tower · Workout";
+    if (/hoodie|sweatshirt|sweatpant|jogger|sweater|fleece|crewneck|quarter.?zip|\bsweats\b/.test(n)) return "Dray tower · Sweats";
+    if (/gym|workout|athletic|training|running|jersey|dri.?fit|performance/.test(n)) return "Dray tower · Workout";
     if (item.category === "outerwear") return "Draymond's top rod";
     if (item.category === "bottoms") return /short/.test(n) ? "Dray tower · Shorts" : "Draymond's lower rod";
     if (item.category === "tops"){
-      if (/hoodie|sweatshirt|sweater|fleece|crewneck|quarter.?zip/.test(n)) return "Dray tower · Hoodies";
       if (/polo/.test(n)) return "Dray tower · Golf";
       if (/dress shirt|button|oxford|blazer|linen|silk/.test(n)) return "Draymond's top rod";
       if (/\btee\b|t.?shirt|tank|henley/.test(n)) return "Dresser — Draymond";
