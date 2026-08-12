@@ -2624,7 +2624,9 @@ $("qcBtn").addEventListener("click", async ()=>{
       const content = [{ type: "text", text:
 `You are quality-checking a wardrobe catalog that was built by AI photo analysis, so some entries are mis-crops: electronics, furniture, trash bags, cords, floor patches, storage gear, or unidentifiable fabric corners — not actual wearable items. Some show items lying in or on a trash bag (being thrown away — flag those too).
 
-For each image below (each preceded by its id and label), judge the IMAGE, not the label: ok=true only if it plausibly shows the labeled wearable clothing, shoes, or accessory. Otherwise ok=false with a blunt five-word-max reason (e.g. "that's a smart speaker").` }];
+Also flag "pictures of nothing": crops that are mostly floor, wall, wood, shadow, or blur where you cannot actually SEE the labeled item — even if the item might technically be at the edge of frame. The test: could a stranger identify the item from this crop alone? If not, ok=false.
+
+For each image below (each preceded by its id and label), judge the IMAGE, not the label: ok=true only if it clearly shows the labeled wearable clothing, shoes, or accessory. Otherwise ok=false with a blunt five-word-max reason (e.g. "that's a smart speaker", "just floor and shadow").` }];
       for (const it of batch){
         content.push({ type: "text", text: `Item ${it.id} — labeled "${it.name}" (${it.category})` });
         content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: it.thumb } });
@@ -3034,21 +3036,37 @@ $("sketchBtn").addEventListener("click", async ()=>{
   btn.disabled = true;
   box.innerHTML = '<p class="hint">Your stylist is at the drawing board…</p>';
   try{
-    const resp = await callClaude({
-      model: "claude-opus-5",
-      max_tokens: 16000,
-      messages: [{
-        role: "user",
-        content:
-`Draw one SVG illustration (viewBox="0 0 900 560") in a warm, flat, friendly cartoon style: cream #fffdf8 background, simple rounded figures with cheerful simple faces, soft colors, Georgia font for any text. Show one cartoon figure per outfit option below, standing side by side, each figure clearly wearing that option's garments in the colors described (match garment types: pants vs dress vs jacket, shoe style, etc.). Put each look's name as a small caption under its figure (fill #6b4f33). No scripts, no event handlers, no external images or links.
+    const sketchPrompt =
+`Draw one SVG illustration, viewBox="0 0 900 560", flat friendly cartoon style. Follow this recipe EXACTLY — it is a proven layout:
 
-Return ONLY the raw <svg> markup, nothing else.
+CANVAS: <rect width="900" height="560" fill="#fffdf8"/>. Header: occasion name centered at y=52, font-family Georgia, size 21, letter-spacing 10, fill #1c1915, all caps; a 30x2 rect at x=435 y=64 fill #a8894e; one italic Georgia 13px subtitle at y=86 fill #8d8374.
+
+FIGURES: one per look, max 3. Figure centers cx: one look → 450; two → 285 and 615; three → 190, 450, 710. Build each figure bottom-up at its cx (offsets relative to cx):
+1. Ground shadow: ellipse cy=480 rx=90 ry=12 fill #f0e7d6.
+2. Legs: two rounded rects (width 25, height 150, rx 10) at cx-28 and cx+3, y=295 — color = the look's pants/shorts (shorts: height 70 and show skin-tone lower legs, rects width 21 fill skin). A dress instead: one trapezoid path from waist y=290 flaring to y=440.
+3. Shoes at y=442: sneakers = white rounded rects 42x17 with #ddd2bf stroke; loafers/dress = dark rounded rects; heels = two wedge paths fill #d6a687.
+4. Torso: rounded rect x=cx-40 y=192 width 81 height 115 rx 14 — color = the shirt. If the look has a jacket/blazer: add two side panel paths over the torso edges in the jacket color, plus two lapel triangles meeting at cx, y=210.
+5. Arms: rounded rects 18x105 at cx-62 and cx+45, y=197, in the outermost layer's color; hands: circles r=9 fill skin at the arm ends (y=310).
+6. Head: circle cy=150 r=31 fill skin; hair: a filled path hugging the top of the head, #221a15; eyes: two circles r=3 at cx-11 and cx+11, cy=149; smile: path "M cx-9 165 Q cx 172 cx+9 165" stroke #221a15 width 2.5 round, no fill.
+7. Skin tones: use #8d5b3f for him, #c68e6e for her.
+8. Captions under each figure: look name at y=516, Georgia 17, letter-spacing 2, fill #6b4f33, all caps; the item list at y=537, Georgia italic 12.5, fill #8d8374.
+
+Match every garment's TYPE and COLOR from the looks below. No scripts, no event handlers, no external references. Return ONLY the raw <svg> markup.
 
 The outfits, styled for ${lastLooks.whoText}:
-${lastLooks.text}` }],
-    });
-    const text = responseText(resp);
-    const m = text && text.match(/<svg[\s\S]*<\/svg>/i);
+${lastLooks.text}`;
+    let m = null;
+    for (let attempt = 0; attempt < 2 && !m; attempt++){
+      const resp = await callClaude({
+        model: "claude-opus-5",
+        max_tokens: 16000,
+        messages: [{ role: "user", content: sketchPrompt }],
+      });
+      const text = responseText(resp);
+      if (!text) { box.innerHTML = ""; return; }
+      const found = text.match(/<svg[\s\S]*<\/svg>/i);
+      if (found && found[0].length > 800) m = found;
+    }
     if (!m){ box.innerHTML = ""; return toast("The sketch didn't come out — try again."); }
     const img = document.createElement("img");
     img.alt = "Cartoon sketch of the outfit options";
