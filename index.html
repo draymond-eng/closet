@@ -905,6 +905,7 @@
   </div>
   <div class="actions" style="margin-top:12px">
     <button class="btn ghost" id="peekClose">Close</button>
+    <button class="btn ghost" id="peekDelete" title="Not a real item? Remove it from the Collection everywhere">Delete item</button>
   </div>
 </dialog>
 
@@ -2399,6 +2400,17 @@ $("peekLoc").addEventListener("change", async (e)=>{
   await putItem(peekingItem);
   renderItems();
   scheduleSync();
+});
+$("peekDelete").addEventListener("click", async ()=>{
+  if (!peekingItem) return;
+  if (!confirm(`Delete "${peekingItem.name}" from the Collection everywhere?`)) return;
+  await dbDel("items", peekingItem.id);
+  markDeletedItem(peekingItem.id);
+  $("peekDlg").close();
+  peekingItem = null;
+  renderItems();
+  scheduleSync();
+  toast("Gone — the Collection forgets it everywhere");
 });
 async function peekItem(item){
   peekingItem = item;
