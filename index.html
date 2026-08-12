@@ -256,6 +256,11 @@
     background:#fffef9;color:var(--wood-dark);
   }
   .photocard .pc-actions button:hover{border-color:var(--wood)}
+  .pnote{
+    font-size:11px;padding:4px 8px 0;color:var(--wood-dark);cursor:pointer;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .pnote.empty{color:var(--muted);font-style:italic}
   .photocard .badge{
     position:absolute;top:6px;left:6px;font-size:10.5px;background:var(--s);color:#fff;
     padding:2px 8px;border-radius:999px;
@@ -701,6 +706,7 @@
           <input id="photoInput" type="file" accept="image/*" multiple hidden>
         </label>
         <select class="designs" id="photoOwner" style="padding:6px 10px" title="Whose things are in the photos you're adding?"></select>
+        <input class="designs" id="photoNote" maxlength="60" placeholder="Quick label… e.g. workout shirts" style="padding:6px 10px;flex:1;min-width:0" title="What's in the photos you're adding? Claude trusts this when cataloging.">
         <button class="btn ghost" id="analyzeAllBtn">Analyze All New</button>
       </div>
       <div class="photos" id="photoStrip"></div>
@@ -1289,11 +1295,13 @@ const uid = ()=>Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
 /* ---------- Photos ---------- */
 $("photoInput").addEventListener("change", async (e)=>{
   const owner = $("photoOwner").value || null;
+  const note = $("photoNote").value.trim() || null;
   for (const file of e.target.files){
     let thumb = null;
     try{ thumb = await blobToScaledBase64(file, 1280); }catch{}
-    await putPhoto({ id: uid(), blob: file, thumb, analyzed: false, owner, createdAt: Date.now() });
+    await putPhoto({ id: uid(), blob: file, thumb, analyzed: false, owner, note, createdAt: Date.now() });
   }
+  $("photoNote").value = "";
   e.target.value = "";
   renderPhotos();
   markPhotosDirty();
@@ -1336,6 +1344,21 @@ async function renderPhotos(){
     img.onload = ()=>URL.revokeObjectURL(img.src);
     card.appendChild(img);
     if (p.analyzed) card.insertAdjacentHTML("beforeend", `<span class="badge">Cataloged</span>`);
+    const note = document.createElement("div");
+    note.className = "pnote" + (p.note ? "" : " empty");
+    note.textContent = p.note || "＋ add label";
+    note.title = "Tap to label what's in this photo — Claude trusts it when cataloging";
+    note.addEventListener("click", async ()=>{
+      const v = prompt("What's in this photo? (e.g. workout shirts)", p.note || "");
+      if (v === null) return;
+      p.note = v.trim().slice(0, 60) || null;
+      await putPhoto(p);
+      markPhotosDirty();
+      note.textContent = p.note || "＋ add label";
+      note.classList.toggle("empty", !p.note);
+      scheduleSync();
+    });
+    card.appendChild(note);
     const acts = document.createElement("div");
     acts.className = "pc-actions";
     const an = document.createElement("button");
@@ -1642,7 +1665,7 @@ async function syncNow(interactive){
           try{ ph.thumb = await blobToScaledBase64(ph.blob, 1280); await dbPut("photos", ph); }catch{ continue; }
         }
         mergedP[ph.id] = { id: ph.id, thumb: ph.thumb, analyzed: !!ph.analyzed,
-          owner: ph.owner || null,
+          owner: ph.owner || null, note: ph.note || null,
           createdAt: ph.createdAt || 0, updatedAt: ph.updatedAt || ph.createdAt || 0 };
       }
       for (const [id, rp] of Object.entries(remoteP.photos || {})){
@@ -1662,9 +1685,11 @@ async function syncNow(interactive){
         for (const [id, mp] of Object.entries(mergedP)){
           const lp = localPhotos.find(x=>x.id === id);
           if (!lp) tx.objectStore("photos").put({ id, blob: b64ToBlob(mp.thumb), thumb: mp.thumb,
-            analyzed: mp.analyzed, owner: mp.owner || null, createdAt: mp.createdAt, updatedAt: mp.updatedAt });
+            analyzed: mp.analyzed, owner: mp.owner || null, note: mp.note || null,
+            createdAt: mp.createdAt, updatedAt: mp.updatedAt });
           else if ((mp.updatedAt || 0) > (lp.updatedAt || 0))
-            tx.objectStore("photos").put({ ...lp, analyzed: mp.analyzed, owner: mp.owner || null, updatedAt: mp.updatedAt });
+            tx.objectStore("photos").put({ ...lp, analyzed: mp.analyzed, owner: mp.owner || null,
+              note: mp.note || null, updatedAt: mp.updatedAt });
         }
         tx.oncomplete = res;
         tx.onerror = ()=>rej(tx.error);
@@ -1893,7 +1918,7 @@ async function analyzePhoto(photo, card){
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageData } },
           { type: "text", text:
 `This is a photo of a shared closet belonging to a married couple: "${state.nameA}" (owner code A) and "${state.nameB}" (owner code B).
-List every distinct clothing item, pair of shoes, or accessory you can identify. Give each a short, specific name (e.g. "olive utility jacket", "black ankle boots"), its dominant color, and a category. ${photo.owner ? `Everything in this photo ${photo.owner === "S" ? "is shared between them — set every owner to \"unknown\"" : `belongs to ${ownerName(photo.owner)} — set every owner to "${photo.owner}"`}; do not guess ownership.` : `If the styling clearly suggests whose item it is, set owner to A or B; otherwise use "unknown".`} For each item, give "box": its tight bounding box in this image as fractions of the image size (x, y = top-left corner; w, h = width and height; all between 0 and 1). In "observations", add one or two friendly sentences about the closet's current organization.` },
+${photo.note ? `The owner labeled this photo: "${photo.note}". Trust that label — it tells you what these items are (a labeled stack means several of that thing; catalog each one, telling them apart by color or detail). ` : ""}List every distinct clothing item, pair of shoes, or accessory you can identify. Give each a short, specific name (e.g. "olive utility jacket", "black ankle boots"), its dominant color, and a category. ${photo.owner ? `Everything in this photo ${photo.owner === "S" ? "is shared between them — set every owner to \"unknown\"" : `belongs to ${ownerName(photo.owner)} — set every owner to "${photo.owner}"`}; do not guess ownership.` : `If the styling clearly suggests whose item it is, set owner to A or B; otherwise use "unknown".`} For each item, give "box": its tight bounding box in this image as fractions of the image size (x, y = top-left corner; w, h = width and height; all between 0 and 1). In "observations", add one or two friendly sentences about the closet's current organization.` },
         ],
       }],
     });
