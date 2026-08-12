@@ -1980,10 +1980,10 @@ const PLAN_ZONES = [
   ["Acrylic boxes", "Her heels — one pair per box, favorites at eye line"],
   ["Draymond's top rod", "Dress shirts and going-out shirts, the burgundy blazer, ties at the end"],
   ["Draymond's lower rod", "Pants and everyday shirts"],
-  ["Draymond's mesh towers", "Top to bottom: workout, shorts, golf, sweats — daily stuff up top, seasonal below"],
+  ["Draymond's mesh towers", "Top to bottom: workout, shorts, sweats, sleep & off-season"],
   ["Wire shelf, up top", "Boots and sometimes-shoes, toes facing out"],
   ["The floor", "Everyday sneakers only — one tidy row per side"],
-  ["Bedroom dresser", "One three-drawer column each — see the Drawer Ledger"],
+  ["Bedroom dresser", "Ali's column, plus Dray's: socks small, golf & hoodies big, casual shirts big"],
   ["Downstairs closet", "Off-season, occasion wear, overflow"],
 ];
 const PLAN_TASKS = [
@@ -2007,11 +2007,11 @@ const DRAWER_LEDGER = [
   { who: "B", where: "bedroom dresser · vanity end", drawers: [
     "Underthings & socks", "Sleepwear & lounge", "Tees & tanks" ] },
   { who: "A", where: "bedroom dresser", drawers: [
-    "Underwear & socks", "Undershirts & sleep", "Tees" ] },
+    "Small — underwear & socks", "Big — golf & hoodies", "Big — casual shirts" ] },
   { who: "B", where: "closet · left wall tower", drawers: [
     "Workout — tops & leggings", "Knits — folded sweaters", "Shorts & casual bottoms", "Cozy — sweatshirts & lounge" ] },
   { who: "A", where: "closet · right wall tower", drawers: [
-    "Workout — tees & gym shorts", "Casual shorts", "Golf — polos & golf shorts", "Sweats — hoodies & sweatpants" ] },
+    "Workout — tees & gym shorts", "Casual shorts", "Sweats — sweatpants & joggers", "Sleep & off-season" ] },
 ];
 function renderLedger(){
   $("drawerLedger").innerHTML = DRAWER_LEDGER.map(st => `
@@ -2061,9 +2061,10 @@ const LOCS = [
   "Ali's rod", "Ali's long hang", "Middle rod", "Acrylic boxes",
   "Ali tower · Workout", "Ali tower · Knits", "Ali tower · Shorts", "Ali tower · Cozy",
   "Draymond's top rod", "Draymond's lower rod",
-  "Dray tower · Workout", "Dray tower · Shorts", "Dray tower · Golf", "Dray tower · Sweats",
+  "Dray tower · Workout", "Dray tower · Shorts", "Dray tower · Sweats",
+  "Dray dresser · Golf & hoodies", "Dray dresser · Casual shirts",
   "Wire shelf", "Floor sneakers", "Cubbies",
-  "Dresser — Ali", "Dresser — Draymond", "Downstairs closet",
+  "Dresser — Ali", "Downstairs closet",
 ];
 const UNPLACED = "Unplaced";
 $("peekLoc").innerHTML = `<option value="">${UNPLACED}</option>` +
@@ -2090,18 +2091,16 @@ function suggestHome(item){
     return "Dresser — Ali";
   }
   if (item.owner === "A"){
-    if (/golf/.test(n)) return "Dray tower · Golf";
-    if (/hoodie|sweatshirt|sweatpant|jogger|sweater|fleece|crewneck|quarter.?zip|\bsweats\b/.test(n)) return "Dray tower · Sweats";
+    if (/golf|polo|hoodie|sweatshirt|sweater|fleece|crewneck|quarter.?zip/.test(n)) return "Dray dresser · Golf & hoodies";
+    if (/sweatpant|jogger|\bsweats\b/.test(n)) return "Dray tower · Sweats";
     if (/gym|workout|athletic|training|running|jersey|dri.?fit|performance/.test(n)) return "Dray tower · Workout";
     if (item.category === "outerwear") return "Draymond's top rod";
     if (item.category === "bottoms") return /short/.test(n) ? "Dray tower · Shorts" : "Draymond's lower rod";
     if (item.category === "tops"){
-      if (/polo/.test(n)) return "Dray tower · Golf";
       if (/dress shirt|button|oxford|blazer|linen|silk/.test(n)) return "Draymond's top rod";
-      if (/\btee\b|t.?shirt|tank|henley/.test(n)) return "Dresser — Draymond";
-      return "Draymond's lower rod";
+      return "Dray dresser · Casual shirts";
     }
-    return "Dresser — Draymond";
+    return "Dray dresser · Casual shirts";
   }
   return "";
 }
