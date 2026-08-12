@@ -2149,7 +2149,7 @@ function saveProfile(p){
 }
 const PROFILE_FIELDS = [
   ["workouts", "Workouts per week",     ["", "0", "1–2", "3–4", "5+"]],
-  ["golf",     "Rounds of golf",        ["", "never", "a couple a month", "weekly", "twice a week or more"]],
+  ["golf",     "Rounds of golf",        ["", "never", "a couple a month", "weekly", "twice a week or more"], "A"],
   ["office",   "Days at the office",    ["", "0 — remote", "1–2", "3–4", "5"]],
   ["dress",    "Work dress code",       ["", "casual", "business casual", "suits & ties"]],
   ["nights",   "Nights out per month",  ["", "rarely", "1–2", "most weekends"]],
@@ -2160,7 +2160,7 @@ function renderConsult(){
   const p = profileState();
   const col = (who)=>{
     const v = p[who] || {};
-    return `<div><b class="cname">${esc(ownerName(who))}</b>` + PROFILE_FIELDS.map(([k, label, opts])=>{
+    return `<div><b class="cname">${esc(ownerName(who))}</b>` + PROFILE_FIELDS.filter(f=>!f[3] || f[3] === who).map(([k, label, opts])=>{
       if (opts) return `<div class="field"><label>${label}</label><select data-who="${who}" data-k="${k}">${
         opts.map(o=>`<option${(v[k] || "") === o ? " selected" : ""}>${o}</option>`).join("")}</select></div>`;
       return `<div class="field"><label>${label}</label><input data-who="${who}" data-k="${k}" value="${esc(v[k] || "")}" maxlength="80" placeholder="${k === "grab" ? "e.g. a polo and shorts" : "e.g. that orange jacket"}"></div>`;
