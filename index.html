@@ -95,6 +95,13 @@
   .jstep.on{border-color:var(--brass,#a8894e);box-shadow:var(--shadow)}
   @media (max-width:640px){ .jstep{min-width:calc(50% - 10px)} }
 
+  .consultgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:640px){ .consultgrid{grid-template-columns:1fr} }
+  .consultgrid .cname{
+    display:block;font-size:12px;text-transform:uppercase;letter-spacing:.14em;
+    color:var(--brass,#a8894e);margin:0 0 8px;
+  }
+
   main{display:grid;grid-template-columns:250px 1fr 270px;gap:18px;padding:18px 26px;align-items:start}
   @media (max-width:1050px){ main{grid-template-columns:1fr} }
 
@@ -757,6 +764,16 @@
 <!-- ================= ORGANIZE TAB ================= -->
 <div class="tabpane" id="tab-organize">
   <div class="wgrid">
+    <div class="card span2">
+      <h2>The Consultation</h2>
+      <p class="hint">Every good stylist starts with questions. Answer for each of you — what you wear most earns the easiest-to-reach spots. Answers sync to both phones, and "Place Every Item" has Claude give every cataloged piece a consistent home based on them.</p>
+      <div class="consultgrid" id="consultForm"></div>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn" id="placeBtn" title="Claude assigns every cataloged item a home based on your answers">Place Every Item</button>
+      </div>
+      <div class="aiout" id="placeOut"></div>
+    </div>
+
     <div class="card span2">
       <h2>The Edit — Keep, Donate, or Toss</h2>
       <p class="hint">A great closet starts with less. Photograph anything on the fence — solo, or a few pieces laid flat on the bed — and get an honest verdict on its condition. Fit can't be judged from a photo, so "does this still fit" gets you sent to the mirror with instructions.</p>
@@ -1533,6 +1550,7 @@ function refreshOwnerSelects(){
   const pv = pw.value || "both";
   pw.innerHTML = peopleOpts;
   pw.value = pv;
+  renderConsult();
 }
 $("newItemCat").innerHTML = ITEM_CATS.map(c=>`<option>${c}</option>`).join("");
 
@@ -1686,7 +1704,14 @@ async function syncNow(interactive){
     localStorage.setItem(PLAN_STORE, JSON.stringify(mergedPlan));
     renderPlan();
 
-    const payload = { v:1, updatedAt: Date.now(), items: merged, deleted: dead, designs: mergedD, deletedDesigns: deadD, plan: mergedPlan };
+    // Consultation answers: newest whole-profile wins
+    const profL = profileState();
+    const mergedProf = remote.profile && (remote.profile.updatedAt || 0) > (profL.updatedAt || 0)
+      ? remote.profile : profL;
+    localStorage.setItem(PROFILE_STORE, JSON.stringify(mergedProf));
+    renderConsult();
+
+    const payload = { v:1, updatedAt: Date.now(), items: merged, deleted: dead, designs: mergedD, deletedDesigns: deadD, plan: mergedPlan, profile: mergedProf };
     const body = JSON.stringify({
       description: "Our Closet app — sync data",
       public: false,
@@ -2111,6 +2136,119 @@ async function renderJourney(){
     b.addEventListener("click", ()=>document.querySelector(`.tab[data-tab="${b.dataset.jump}"]`).click()));
 }
 
+/* ---------- The Consultation: stylist interview + Claude placement ---------- */
+const PROFILE_STORE = "closet-profile";
+function profileState(){
+  try{ return JSON.parse(localStorage.getItem(PROFILE_STORE)) || { A:{}, B:{}, updatedAt:0 }; }
+  catch{ return { A:{}, B:{}, updatedAt:0 }; }
+}
+function saveProfile(p){
+  p.updatedAt = Date.now();
+  localStorage.setItem(PROFILE_STORE, JSON.stringify(p));
+  scheduleSync();
+}
+const PROFILE_FIELDS = [
+  ["workouts", "Workouts per week",     ["", "0", "1–2", "3–4", "5+"]],
+  ["golf",     "Rounds of golf",        ["", "never", "a couple a month", "weekly", "twice a week or more"]],
+  ["office",   "Days at the office",    ["", "0 — remote", "1–2", "3–4", "5"]],
+  ["dress",    "Work dress code",       ["", "casual", "business casual", "suits & ties"]],
+  ["nights",   "Nights out per month",  ["", "rarely", "1–2", "most weekends"]],
+  ["grab",     "Grabbed most mornings", null],
+  ["skip",     "Owned but never worn",  null],
+];
+function renderConsult(){
+  const p = profileState();
+  const col = (who)=>{
+    const v = p[who] || {};
+    return `<div><b class="cname">${esc(ownerName(who))}</b>` + PROFILE_FIELDS.map(([k, label, opts])=>{
+      if (opts) return `<div class="field"><label>${label}</label><select data-who="${who}" data-k="${k}">${
+        opts.map(o=>`<option${(v[k] || "") === o ? " selected" : ""}>${o}</option>`).join("")}</select></div>`;
+      return `<div class="field"><label>${label}</label><input data-who="${who}" data-k="${k}" value="${esc(v[k] || "")}" maxlength="80" placeholder="${k === "grab" ? "e.g. a polo and shorts" : "e.g. that orange jacket"}"></div>`;
+    }).join("") + `</div>`;
+  };
+  $("consultForm").innerHTML = col("A") + col("B");
+  $("consultForm").querySelectorAll("select,input").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      const cur = profileState();
+      (cur[el.dataset.who] = cur[el.dataset.who] || {})[el.dataset.k] = el.value.trim();
+      saveProfile(cur);
+    });
+  });
+}
+function describeProfile(){
+  const p = profileState();
+  const line = (who)=>{
+    const v = p[who] || {};
+    const bits = PROFILE_FIELDS.map(([k, label])=>v[k] ? `${label.toLowerCase()}: ${v[k]}` : "").filter(Boolean);
+    return bits.length ? `${ownerName(who)} — ${bits.join("; ")}` : "";
+  };
+  return [line("A"), line("B")].filter(Boolean).join("\n");
+}
+
+const placeSchema = ()=>({
+  type: "object", required: ["placements", "hangingOrder"], additionalProperties: false,
+  properties: {
+    placements: { type: "array", items: {
+      type: "object", required: ["id", "loc"], additionalProperties: false,
+      properties: { id: { type: "string" }, loc: { type: "string", enum: LOCS } },
+    }},
+    hangingOrder: { type: "string" },
+  },
+});
+$("placeBtn").addEventListener("click", async ()=>{
+  const items = await dbAll("items");
+  if (!items.length) return toast("Catalog some items first — then I can place them");
+  const btn = $("placeBtn"), out = $("placeOut");
+  btn.disabled = true;
+  out.textContent = "Your stylist is walking the closet…";
+  try{
+    const resp = await callClaude({
+      model: "claude-opus-5",
+      max_tokens: 12000,
+      output_config: { format: { type: "json_schema", schema: placeSchema() } },
+      messages: [{ role: "user", content:
+`You are the personal stylist and closet organizer for a married couple: ${state.nameA} (owner code A) and ${state.nameB} (owner code B).
+
+The homes available in their closet — assign "loc" ONLY from this exact list:
+${LOCS.join(" | ")}
+
+How the homes work: "Ali's rod" is her everyday hanging tops; "Ali's long hang" is dresses, coats, blazers; "Middle rod" is her jeans and trousers on hangers; "Acrylic boxes" are her heels; the "Ali tower" drawers are folded (workout, knits, shorts, cozy loungewear). "Draymond's top rod" is dress shirts, going-out shirts, blazers, ties; "Draymond's lower rod" is pants and everyday hanging shirts; the "Dray tower" drawers are folded (workout, casual shorts, sweatpants); "Dray dresser · Golf & hoodies" and "Dray dresser · Casual shirts" are his two big bedroom drawers. "Wire shelf" is boots and occasional shoes; "Floor sneakers" is everyday sneakers; "Cubbies" is accessories, caps, and bags; "Dresser — Ali" is her folded basics; "Downstairs closet" is off-season, occasion wear, and things rarely worn.
+
+What they told you about their lives:
+${describeProfile() || "(no interview answers yet — place by category and common sense)"}
+
+Their cataloged items (id: name [category, owner]):
+${items.map(i=>`${i.id}: ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}]`).join("\n")}
+
+Assign EVERY item a home. Rules: what they wear most often gets the easiest-to-reach spot; keep golf together and workout together; off-season and rarely-worn go downstairs — including anything matching what they say they never wear.
+
+Then in "hangingOrder", write a short plain-text hanging guide (under 220 words): for each rod, the left-to-right order (group by type, light to dark within each group), so the closet reads consistently every time they open it. Mention any never-worn pieces you sent downstairs as donate candidates.` }],
+    });
+    const text = responseText(resp);
+    if (!text){ out.textContent = ""; return; }
+    const data = JSON.parse(text);
+    const byId = new Map(items.map(i=>[i.id, i]));
+    let placed = 0;
+    for (const pl of data.placements || []){
+      const it = byId.get(pl.id);
+      if (!it || !LOCS.includes(pl.loc)) continue;
+      it.loc = pl.loc;
+      await putItem(it);
+      placed++;
+    }
+    renderItems();
+    scheduleSync();
+    out.textContent = data.hangingOrder || "";
+    toast(`Placed ${placed} item${placed === 1 ? "" : "s"} — see the Collection by location`);
+  }catch(err){
+    out.textContent = "";
+    if (err instanceof SyntaxError) toast("Couldn't parse the placement — try again.");
+    else friendlyError(err);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
 /* ---------- Locations: where each item lives ---------- */
 const LOCS = [
   "Ali's rod", "Ali's long hang", "Middle rod", "Acrylic boxes",
@@ -2354,6 +2492,7 @@ ${describeClosetDesign()}
 Their cataloged wardrobe:
 ${wardrobe}
 
+${describeProfile() ? `What they told you about their habits (what's worn most earns the easiest-to-reach spots):\n${describeProfile()}\n` : ""}
 Write an organizing plan in plain text (no markdown tables or headers with #):
 1. Go section by section: what should live there and why, matching item categories to the hardware (hang zones for hanging clothes, drawers for folded, shoe shelves for shoes, etc.) and respecting whose section is whose.
 2. Note anything that doesn't have a good home and what to do about it.
