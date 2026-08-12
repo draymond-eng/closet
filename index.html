@@ -848,6 +848,13 @@
     <span class="hint" id="syncStatus" style="align-self:center;margin:0"></span>
   </div>
 
+  <h2>Housekeeping</h2>
+  <p>Starting fresh? These clear the Collection on <b>every synced device</b> — your closet designs, House Plan checkmarks, and keys are untouched.</p>
+  <div class="actions" style="margin-bottom:16px">
+    <button class="btn ghost" id="clearPhotosBtn">Clear all photos</button>
+    <button class="btn ghost" id="clearCatalogBtn">Clear photos + items</button>
+  </div>
+
   <div class="actions">
     <button class="btn" id="saveKeyBtn">Save</button>
     <button class="btn ghost" id="closeDlgBtn">Close</button>
@@ -1651,6 +1658,30 @@ async function syncNow(interactive){
     syncing = false;
   }
 }
+$("clearPhotosBtn").addEventListener("click", async ()=>{
+  const photos = await dbAll("photos");
+  if (!photos.length) return toast("No photos to clear");
+  if (!confirm(`Delete all ${photos.length} photos from every device? Cataloged items stay.`)) return;
+  for (const ph of photos){ await dbDel("photos", ph.id); markDeletedPhoto(ph.id); }
+  markPhotosDirty();
+  renderPhotos();
+  scheduleSync();
+  toast("Photos cleared — ready for the new shoot");
+});
+$("clearCatalogBtn").addEventListener("click", async ()=>{
+  const photos = await dbAll("photos");
+  const items = await dbAll("items");
+  if (!photos.length && !items.length) return toast("Already empty");
+  if (!confirm(`Delete ${items.length} items and ${photos.length} photos from every device? This is the full fresh start.`)) return;
+  for (const it of items){ await dbDel("items", it.id); markDeletedItem(it.id); }
+  for (const ph of photos){ await dbDel("photos", ph.id); markDeletedPhoto(ph.id); }
+  markPhotosDirty();
+  renderPhotos();
+  renderItems();
+  scheduleSync();
+  toast("Collection cleared — the showroom awaits its new inventory");
+});
+
 $("syncNowBtn").addEventListener("click", ()=>{
   if (!$("ghTokenInput").value.trim() && !localStorage.getItem(SYNC_TOKEN_STORE))
     return toast("Paste a GitHub token first");
