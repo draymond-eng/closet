@@ -325,6 +325,7 @@
     display:inline-flex;align-items:center;gap:7px;padding:5px 10px;font-size:12.5px;
     border:1.5px solid var(--line);border-radius:999px;background:#fffef9;
   }
+  .chip.sus{border-color:var(--bad);background:#fdf3f1}
   .chip .dot{width:9px;height:9px;border-radius:50%;flex:none;cursor:pointer}
   .chip .x{border:none;background:none;padding:0;color:var(--muted);font-size:12px;line-height:1}
   .chip .x:hover{color:var(--bad)}
@@ -777,6 +778,8 @@
           <option value="location">View by location</option>
         </select>
         <button class="btn ghost" id="assignHomesBtn" title="Give every unplaced item a home per the House Plan">Assign Homes</button>
+        <button class="btn ghost" id="qcBtn" title="Claude re-checks every item's photo for mis-crops — speakers, trash, floor debris">QC Items</button>
+        <button class="btn ghost" id="qcPurgeBtn" hidden></button>
       </div>
       <div class="itemlist" id="itemList"><p class="hint">Nothing cataloged yet.</p></div>
       <div class="addrow">
@@ -1564,8 +1567,9 @@ async function renderItems(){
       });
       const nm = document.createElement("span");
       nm.className = "nm";
-      nm.textContent = item.name;
-      nm.title = "Tap to see its photo";
+      nm.textContent = (item.qc ? "⚠ " : "") + item.name;
+      nm.title = item.qc ? `Flagged: ${item.qc} — tap to inspect` : "Tap to see its photo";
+      if (item.qc) chip.classList.add("sus");
       nm.addEventListener("click", ()=>peekItem(item));
       chip.append(dot, nm, x);
       chips.appendChild(chip);
@@ -1573,6 +1577,10 @@ async function renderItems(){
     box.appendChild(chips);
     list.appendChild(box);
   }
+  const flagged = items.filter(i=>i.qc).length;
+  const purge = $("qcPurgeBtn");
+  purge.hidden = !flagged;
+  purge.textContent = `Delete ${flagged} flagged`;
 }
 
 function refreshOwnerSelects(){
@@ -2416,7 +2424,8 @@ async function peekItem(item){
   peekingItem = item;
   const img = $("peekImg"), cap = $("peekCap");
   cap.textContent = item.name +
-    (item.color ? " · " + item.color : "") + " · " + ownerName(item.owner);
+    (item.color ? " · " + item.color : "") + " · " + ownerName(item.owner) +
+    (item.qc ? ` · ⚠ ${item.qc}` : "");
   const pl = $("peekLoc");
   if (item.loc && ![...pl.options].some(o=>o.value === item.loc))
     pl.insertAdjacentHTML("beforeend", `<option>${esc(item.loc)}</option>`);
@@ -2597,6 +2606,77 @@ Keep it under 400 words and make it feel like advice from a friend who's great a
   }finally{
     btn.disabled = false;
   }
+});
+
+/* ---------- QC: Claude re-inspects every item crop for mis-crops ---------- */
+$("qcBtn").addEventListener("click", async ()=>{
+  const items = await dbAll("items");
+  if (!items.length) return toast("Nothing to QC yet");
+  const withThumbs = items.filter(i=>i.thumb);
+  if (!withThumbs.length) return toast("No item photos to check — hand-added items skip QC");
+  const btn = $("qcBtn");
+  btn.disabled = true;
+  let flagged = 0, checked = 0;
+  try{
+    for (let b = 0; b < withThumbs.length; b += 14){
+      const batch = withThumbs.slice(b, b + 14);
+      btn.textContent = `QC ${Math.min(b + 14, withThumbs.length)}/${withThumbs.length}…`;
+      const content = [{ type: "text", text:
+`You are quality-checking a wardrobe catalog that was built by AI photo analysis, so some entries are mis-crops: electronics, furniture, trash bags, cords, floor patches, storage gear, or unidentifiable fabric corners — not actual wearable items. Some show items lying in or on a trash bag (being thrown away — flag those too).
+
+For each image below (each preceded by its id and label), judge the IMAGE, not the label: ok=true only if it plausibly shows the labeled wearable clothing, shoes, or accessory. Otherwise ok=false with a blunt five-word-max reason (e.g. "that's a smart speaker").` }];
+      for (const it of batch){
+        content.push({ type: "text", text: `Item ${it.id} — labeled "${it.name}" (${it.category})` });
+        content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: it.thumb } });
+      }
+      const resp = await callClaude({
+        model: "claude-opus-5",
+        max_tokens: 4000,
+        output_config: { format: { type: "json_schema", schema: {
+          type: "object", required: ["verdicts"], additionalProperties: false,
+          properties: { verdicts: { type: "array", items: {
+            type: "object", required: ["id", "ok", "reason"], additionalProperties: false,
+            properties: { id: { type: "string" }, ok: { type: "boolean" }, reason: { type: "string" } },
+          }}},
+        }}},
+        messages: [{ role: "user", content }],
+      });
+      const text = responseText(resp);
+      if (!text) return;
+      const data = JSON.parse(text);
+      for (const v of data.verdicts || []){
+        const it = batch.find(x=>x.id === v.id);
+        if (!it) continue;
+        it.qc = v.ok ? null : (v.reason || "doesn't look like clothing");
+        if (it.qc) flagged++;
+        checked++;
+        await putItem(it);
+      }
+    }
+    renderItems();
+    scheduleSync();
+    toast(flagged
+      ? `QC done — ${flagged} of ${checked} flagged ⚠. Review them, then hit Delete flagged.`
+      : `QC done — all ${checked} items look real. Clean catalog.`);
+  }catch(err){
+    if (err instanceof SyntaxError) toast("QC stumbled — run it again.");
+    else friendlyError(err);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "QC Items";
+  }
+});
+$("qcPurgeBtn").addEventListener("click", async ()=>{
+  const items = (await dbAll("items")).filter(i=>i.qc);
+  if (!items.length) return;
+  if (!confirm(`Delete ${items.length} flagged item${items.length === 1 ? "" : "s"} everywhere? Peek any ⚠ chip first if you want to double-check.`)) return;
+  for (const it of items){
+    await dbDel("items", it.id);
+    markDeletedItem(it.id);
+  }
+  renderItems();
+  scheduleSync();
+  toast(`${items.length} impostor${items.length === 1 ? "" : "s"} gone — the Collection is clean`);
 });
 
 /* ---------- The Concierge: in-app assistant ---------- */
