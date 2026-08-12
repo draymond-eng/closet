@@ -2575,8 +2575,10 @@ async function conciergeContext(){
   const items = await dbAll("items");
   const st = planState();
   const done = PLAN_TASKS.filter(([id])=>st[id] && st[id].done).length;
-  const cat = items.slice(0, 200).map(i=>`- ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}${i.loc ? `, lives: ${i.loc}` : ""}]`).join("\n");
+  const cat = items.slice(0, 200).map(i=>`- id ${i.id}: ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}${i.loc ? `, lives: ${i.loc}` : ""}]`).join("\n");
   return `You are The Concierge — the in-app stylist, closet designer, and organizing assistant inside "The Washington Closet", the shared closet app of a married couple: ${state.nameA} (owner A) and ${state.nameB} (owner B). Be warm, specific, and brief — plain text only, under 150 words unless asked for more. Ground every answer in the real closet and catalog below; never invent items they don't own.
+
+You can DO things, not just talk: when they ask you to move, re-home, or reorganize items, fill "moves" with the item ids and their new homes (loc must be one of the Homes below) and confirm in "reply" what you moved and why. One person's items never move into the other's zones. When they only ask a question, leave "moves" empty. Never move items they didn't ask about.
 
 Closet layout (sections left to right):
 ${describeClosetDesign()}
@@ -2616,14 +2618,47 @@ async function sendChat(){
   try{
     const resp = await callClaude({
       model: "claude-opus-5",
-      max_tokens: 1500,
+      max_tokens: 2500,
+      output_config: { format: { type: "json_schema", schema: {
+        type: "object", required: ["reply", "moves"], additionalProperties: false,
+        properties: {
+          reply: { type: "string" },
+          moves: { type: "array", items: {
+            type: "object", required: ["id", "loc"], additionalProperties: false,
+            properties: { id: { type: "string" }, loc: { type: "string", enum: LOCS } },
+          }},
+        },
+      }}},
       system: await conciergeContext(),
       messages: chatMessages(),
     });
     const text = responseText(resp);
-    if (text){ chatHistory.push({ role: "assistant", content: text }); saveChat(); }
+    if (text){
+      const data = JSON.parse(text);
+      let reply = data.reply || "";
+      if (data.moves && data.moves.length){
+        const items = await dbAll("items");
+        const byId = new Map(items.map(i=>[i.id, i]));
+        let moved = 0;
+        for (const mv of data.moves){
+          const it = byId.get(mv.id);
+          if (!it || !LOCS.includes(mv.loc) || !locAllowed(it, mv.loc)) continue;
+          it.loc = mv.loc;
+          await putItem(it);
+          moved++;
+        }
+        if (moved){
+          renderItems();
+          scheduleSync();
+          reply += `\n\n✦ Done — ${moved} item${moved === 1 ? "" : "s"} re-homed. Check the Collection by location.`;
+        }
+      }
+      chatHistory.push({ role: "assistant", content: reply });
+      saveChat();
+    }
   }catch(err){
-    friendlyError(err);
+    if (err instanceof SyntaxError) toast("The Concierge mumbled — ask again.");
+    else friendlyError(err);
   }finally{
     $("chatSend").disabled = false;
     renderChat();
