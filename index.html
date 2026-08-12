@@ -2083,9 +2083,9 @@ const PLAN_ZONES = [
   ["Ali's long hang", "Dresses, coats, blazers; boots parked beneath"],
   ["Middle rod", "Ali's jeans and trousers, folded over hangers"],
   ["Acrylic boxes", "Her heels — one pair per box, favorites at eye line"],
-  ["Draymond's top rod", "Dress shirts and going-out shirts"],
-  ["Draymond's jacket rod", "Over the mesh tower — blazers and jackets"],
-  ["Draymond's lower rod", "Pants and everyday shirts"],
+  ["Draymond's top rod", "Jerseys, suits, blazers, then shirts — short sleeve to long"],
+  ["Draymond's jacket rod", "Over the mesh tower — jackets and coats"],
+  ["Draymond's lower rod", "Pants only — jeans, chinos, trousers"],
   ["Draymond's mesh towers", "Top to bottom: workout, shorts, sweats, sleep & off-season"],
   ["Wire shelf, up top", "All of Dray's shoes, plus boots — toes facing out"],
   ["The floor", "Ali's everyday sneakers in one row; Dray's gray backpack"],
@@ -2103,8 +2103,8 @@ const PLAN_TASKS = [
   ["p7",  "Ali's wall: tops rehung light to dark, knits folded into her towers"],
   ["p8",  "Ali's long hang: dresses and coats together, boots parked below"],
   ["p9",  "Middle rod: her jeans and trousers on hangers, acrylic tidy beneath"],
-  ["p10", "Draymond's top rod: dress shirts, going-out shirts, blazer — ties boxed downstairs"],
-  ["p11", "Draymond's lower rod: pants and casual shirts; his hoodies into the towers"],
+  ["p10", "Draymond's top rod: jerseys, suits, blazers, button-downs, shirts short-to-long sleeve"],
+  ["p11", "Draymond's lower rod: pants only; his hoodies fold into the dresser"],
   ["p12", "Dray's hats into the gray backpack under his lower rod; bags upright in the cubbies"],
   ["p13", "Fill all 14 drawers per the Drawer Ledger — one purpose per drawer, heavy things low"],
   ["p14", "Carry the downstairs pile down and the donate bag out the door"],
@@ -2127,11 +2127,11 @@ const RAILS = [
   { who: "B", where: "middle rod", steps: [
     "Jeans, folded over hangers", "Trousers", "(acrylic heels beneath)" ] },
   { who: "A", where: "top rod · right wall", steps: [
-    "Going-out shirts", "Dress shirts, light → dark", "(suits & ties live downstairs)" ] },
+    "Jerseys", "Suits", "Blazers", "Button-downs", "Short-sleeve shirts", "Long-sleeve shirts" ] },
   { who: "A", where: "lower rod · right wall", steps: [
-    "Casual button-downs", "Jeans", "Chinos & trousers", "Jerseys on the end" ] },
+    "Pants only — jeans", "Chinos", "Dress trousers", "(ties live downstairs)" ] },
   { who: "A", where: "rod over the mesh tower", steps: [
-    "Blazers, dark → light", "Casual jackets & coats" ] },
+    "Jackets & coats, heavy → light" ] },
 ];
 function renderLedger(){
   $("railMap").innerHTML = RAILS.map(r => `
@@ -2295,7 +2295,7 @@ $("placeBtn").addEventListener("click", async ()=>{
 The homes available in their closet — assign "loc" ONLY from this exact list:
 ${LOCS.join(" | ")}
 
-How the homes work: "Ali's rod" is her everyday hanging tops; "Ali's long hang" is dresses, coats, blazers; "Middle rod" is her jeans and trousers on hangers; "Acrylic boxes" are her heels; the "Ali tower" drawers are folded (workout, knits, shorts, cozy loungewear). "Draymond's top rod" is dress shirts and going-out shirts; "Draymond's lower rod" is pants, casual button-downs, and jerseys; "Dray jacket rod" (over his mesh tower) is blazers and jackets; the "Dray tower" drawers are folded (workout, casual shorts, sweatpants); "Dray dresser · Golf & hoodies" and "Dray dresser · Casual shirts" are his two big bedroom drawers. "Wire shelf" is ALL of ${state.nameA}'s shoes plus boots; "Floor sneakers" is ${state.nameB}'s everyday sneaker row; "Cubbies" is accessories and bags; "Gray backpack · hats" is ${state.nameA}'s hat stash on the floor under his lower rod; "Dresser — Ali" is her folded basics; "Downstairs closet" is off-season, occasion wear, and things rarely worn.
+How the homes work: "Ali's rod" is her everyday hanging tops; "Ali's long hang" is dresses, coats, blazers; "Middle rod" is her jeans and trousers on hangers; "Acrylic boxes" are her heels; the "Ali tower" drawers are folded (workout, knits, shorts, cozy loungewear). "Draymond's top rod" runs left to right: jerseys, suits, blazers, button-downs, short-sleeve then long-sleeve shirts; "Draymond's lower rod" is pants only; "Dray jacket rod" (over his mesh tower) is jackets and coats; the "Dray tower" drawers are folded (workout, casual shorts, sweatpants); "Dray dresser · Golf & hoodies" and "Dray dresser · Casual shirts" are his two big bedroom drawers. "Wire shelf" is ALL of ${state.nameA}'s shoes plus boots; "Floor sneakers" is ${state.nameB}'s everyday sneaker row; "Cubbies" is accessories and bags; "Gray backpack · hats" is ${state.nameA}'s hat stash on the floor under his lower rod; "Dresser — Ali" is her folded basics; "Downstairs closet" is off-season, occasion wear, and things rarely worn.
 
 What they told you about their lives:
 ${describeProfile() || "(no interview answers yet — place by category and common sense)"}
@@ -2372,9 +2372,9 @@ function suggestHome(item){
   if (item.owner === "A"){
     if (/golf|polo|hoodie|sweatshirt|sweater|fleece|crewneck|quarter.?zip/.test(n)) return "Dray dresser · Golf & hoodies";
     if (/sweatpant|jogger|\bsweats\b/.test(n)) return "Dray tower · Sweats";
-    if (/jersey/.test(n)) return "Draymond's lower rod";
+    if (/jersey|\bsuit\b|blazer/.test(n)) return "Draymond's top rod";
     if (/gym|workout|athletic|training|running|dri.?fit|performance/.test(n)) return "Dray tower · Workout";
-    if (item.category === "outerwear" || /blazer|jacket|coat/.test(n)) return "Dray jacket rod";
+    if (item.category === "outerwear" || /jacket|coat/.test(n)) return "Dray jacket rod";
     if (item.category === "bottoms") return /short/.test(n) ? "Dray tower · Shorts" : "Draymond's lower rod";
     if (item.category === "tops"){
       if (/dress shirt|button|oxford|linen|silk/.test(n)) return "Draymond's top rod";
