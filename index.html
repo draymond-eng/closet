@@ -124,6 +124,13 @@
   .crow{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
   .crow input{flex:1;min-width:0;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:16px}
 
+  .lookcard{border:1.5px solid var(--line);border-radius:12px;padding:12px;margin:0 0 12px;background:#fffef9}
+  .lookcard b{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--wood-dark)}
+  .lookcard p{margin:8px 0 0;font-size:13px;line-height:1.5}
+  .lookitems{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+  .lookthumb{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1.5px solid var(--line);cursor:pointer}
+  .lookchip{padding:6px 10px;border:1.5px solid var(--line);border-radius:999px;font-size:12px;cursor:pointer;background:#fff;align-self:center}
+
   main{display:grid;grid-template-columns:250px 1fr 270px;gap:18px;padding:18px 26px;align-items:start}
   @media (max-width:1050px){ main{grid-template-columns:1fr} }
 
@@ -2694,19 +2701,34 @@ async function generateOutfits(){
   $("sketchBox").innerHTML = "";
   lastLooks = null;
   out.textContent = "Your stylist is choosing…";
-  const wardrobeText = relevant.map(i=>`- ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}]`).join("\n");
+  const byId = new Map(relevant.map(i=>[i.id, i]));
+  const wardrobeText = relevant.map(i=>`- id ${i.id}: ${i.name}${i.color ? ` (${i.color})` : ""} [${i.category}, ${ownerName(i.owner)}]`).join("\n");
   const whoText = who === "both" ? `both ${state.nameA} and ${state.nameB} (coordinate their looks!)` : ownerName(who);
 
   const spouseMode = $("spouseMode").checked && who !== "both";
   const spouseName = who === "A" ? state.nameB : state.nameA;
   const spouseLine = spouseMode
-    ? `\nSpecial mode: write this as if ${spouseName} personally chose the outfit for ${ownerName(who)}. Use ${spouseName}'s warm, teasing voice, and end with a short loving note from ${spouseName} about why they picked it.`
+    ? `\nSpecial mode: write every "why" as if ${spouseName} personally chose the outfit for ${ownerName(who)} — warm and teasing — and make "note" a short loving line from ${spouseName} about why they picked it.`
     : "";
 
   try{
     const resp = await callClaude({
       model: "claude-opus-5",
       max_tokens: 6000,
+      output_config: { format: { type: "json_schema", schema: {
+        type: "object", required: ["looks", "note"], additionalProperties: false,
+        properties: {
+          looks: { type: "array", items: {
+            type: "object", required: ["name", "itemIds", "why"], additionalProperties: false,
+            properties: {
+              name: { type: "string" },
+              itemIds: { type: "array", items: { type: "string" } },
+              why: { type: "string" },
+            },
+          }},
+          note: { type: "string" },
+        },
+      }}},
       messages: [{
         role: "user",
         content:
@@ -2715,25 +2737,79 @@ async function generateOutfits(){
 Dressing: ${whoText}
 Occasion: ${occasion}
 Weather: ${$("outfitWeather").value.trim() || "not specified"}
-Vibe: ${$("outfitVibe").value.trim() || "their call"}${spouseLine}
+Vibe: ${$("outfitVibe").value.trim() || "their call"}${describeProfile() ? `\nWhat you know about them:\n${describeProfile()}` : ""}${spouseLine}
 
-Their available wardrobe:
+Their available wardrobe (pick by id):
 ${wardrobeText}
 
-Give 2–3 outfit options in plain text (no markdown symbols). For each: a fun name for the look, the exact items from the list, and one sentence on why it works. If the wardrobe is missing something important for this occasion, say so kindly at the end. Keep it under 300 words.` }],
+Give 2–3 complete looks. Each look: a fun name, "itemIds" — the exact ids of every piece head to toe (include shoes when any are cataloged), and "why" — one warm sentence on why it works for this occasion and weather. In "note": if the wardrobe is missing something important for this occasion, say so kindly; otherwise a single encouraging line.` }],
     });
     const text = responseText(resp);
-    out.textContent = text || "";
-    if (text){
-      lastLooks = { whoText, text };
+    if (!text){
+      out.textContent = "";
+      $("outfitEmpty").style.display = "";
+      return;
+    }
+    const data = JSON.parse(text);
+    renderLooks(data.looks || [], data.note || "", byId);
+    const summary = (data.looks || []).map(lk=>{
+      const names = lk.itemIds.map(id=>byId.get(id) && byId.get(id).name).filter(Boolean).join(", ");
+      return `${lk.name}: ${names} — ${lk.why}`;
+    }).join("\n");
+    if (summary){
+      lastLooks = { whoText, text: summary };
       $("sketchActions").style.display = "";
     }
   }catch(err){
     out.textContent = "";
     $("outfitEmpty").style.display = "";
-    friendlyError(err);
+    if (err instanceof SyntaxError) toast("The stylist mumbled — try again.");
+    else friendlyError(err);
   }finally{
     btn.disabled = false;
+  }
+}
+function renderLooks(looks, note, byId){
+  const out = $("outfitOut");
+  out.innerHTML = "";
+  for (const lk of looks){
+    const card = document.createElement("div");
+    card.className = "lookcard";
+    const title = document.createElement("b");
+    title.textContent = lk.name;
+    card.appendChild(title);
+    const row = document.createElement("div");
+    row.className = "lookitems";
+    for (const id of lk.itemIds || []){
+      const it = byId.get(id);
+      if (!it) continue;
+      let el;
+      if (it.thumb){
+        el = document.createElement("img");
+        el.className = "lookthumb";
+        el.src = "data:image/jpeg;base64," + it.thumb;
+        el.alt = it.name;
+        el.title = it.name;
+      }else{
+        el = document.createElement("span");
+        el.className = "lookchip";
+        el.textContent = it.name;
+      }
+      el.addEventListener("click", ()=>peekItem(it));
+      row.appendChild(el);
+    }
+    card.appendChild(row);
+    const why = document.createElement("p");
+    why.textContent = lk.why;
+    card.appendChild(why);
+    out.appendChild(card);
+  }
+  if (note){
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.style.marginTop = "4px";
+    p.textContent = note;
+    out.appendChild(p);
   }
 }
 $("outfitBtn").addEventListener("click", generateOutfits);
